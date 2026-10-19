@@ -116,15 +116,16 @@ A single Express + TypeScript service serves the static frontend and the JSON/SS
 
 ```mermaid
 flowchart LR
-    U[Developer] -->|name or URL| R
-    subgraph Pipeline
-      R[1 · Resolve<br/>find the official docs domain] --> I[2 · Investigate<br/>4 parallel searches on that domain]
-      I --> S[3 · Synthesize<br/>one structured-output LLM call]
-      S --> P[4 · Persist<br/>SQLite + slug URL]
+    U["Developer"] -->|"app name or URL"| R
+    subgraph pipeline["Pipeline"]
+        R["1. Resolve: find the official docs domain"] --> I["2. Investigate: 4 parallel searches on that domain"]
+        I --> S["3. Synthesize: one structured-output LLM call"]
+        S --> P["4. Persist: SQLite + slug URL"]
     end
-    R & I -.-> T[(Tavily<br/>search + extraction)]
-    S -.-> L[(LLM provider<br/>Anthropic / OpenAI-compatible)]
-    P --> G[Shareable guide<br/>/guides/:slug]
+    R -.-> T[("Tavily search and extraction")]
+    I -.-> T
+    S -.-> L[("LLM provider: Anthropic or OpenAI-compatible")]
+    P --> G["Shareable guide at /guides/slug"]
 ```
 
 | Stage | What happens | Code |
