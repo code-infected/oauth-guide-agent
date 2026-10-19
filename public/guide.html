@@ -23,7 +23,7 @@
       <p>
         <span class="badge d-${esc(g.difficulty)}">${esc(g.difficulty)}</span>
         <span class="badge ${g.isLive ? "live" : "verified"}">${g.isLive ? "Agent-generated · not reviewed" : "Verified against live docs"}</span>
-        <span class="muted" style="font-size:13px">&nbsp;${g.isLive ? "Generated" : "Last checked"} ${esc(new Date(g.generatedAt).toLocaleDateString())}
+        <span class="muted" style="font-size:13px">&nbsp;${g.isLive ? "Generated" : "Last checked"} ${esc(new Date(g.generatedAt).toLocaleDateString(undefined, { timeZone: "UTC", dateStyle: "medium" }))}
         · <a href="${safeUrl(g.app.website)}">${esc(g.app.website)}</a> · <a href="${safeUrl(g.app.docsUrl)}">Provider docs</a></span>
       </p>
       ${g.isLive ? `<p class="notice">An agent wrote this guide from the provider docs listed under Sources, and nobody has reviewed it. Check the Evidence section to see which claims the docs support and which are inferred.</p>` : ""}

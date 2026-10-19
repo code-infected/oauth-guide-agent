@@ -14,10 +14,11 @@
   <section class="card">
     <h2>Get a guide for any app</h2>
     <form id="generate">
-      <input type="text" id="input" placeholder="App name or website, e.g. Zoom or https://asana.com" required maxlength="200">
+      <input type="text" id="input" placeholder="App name or website, e.g. Zoom or https://asana.com" maxlength="200" autocomplete="off">
       <button type="submit" id="submit">Generate guide</button>
     </form>
     <p class="muted" style="font-size:13px;margin:8px 0 0">An agent searches the provider's own developer docs and drafts a guide from what it reads. This usually takes 30–90 seconds.</p>
+    <p class="match" id="match" hidden></p>
     <ul class="log" id="log"></ul>
     <div class="error" id="error" hidden></div>
   </section>
@@ -31,15 +32,37 @@
 <script>
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
+  const token = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  // "https://www.linear.app/x" → "linear", so typed URLs filter the same as names.
+  const queryToken = (s) => {
+    const v = s.trim();
+    const isUrl = /^https?:\/\//i.test(v) || /^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v);
+    return token(isUrl ? v.replace(/^https?:\/\//i, "").replace(/^www\./i, "").split(".")[0] : v);
+  };
+  let guides = [];
+
   async function loadLibrary() {
+    guides = await fetch("/api/guides").then((r) => r.json());
+    renderLibrary();
+  }
+
+  // The generate input doubles as a library filter, and points to an existing guide instead of regenerating it.
+  function renderLibrary() {
     const list = document.getElementById("library");
-    const guides = await fetch("/api/guides").then((r) => r.json());
-    list.innerHTML = guides.length
-      ? guides.map((g) => `<li><a href="/guides/${encodeURIComponent(g.slug)}">${esc(g.name)}</a>
+    const match = document.getElementById("match");
+    const q = queryToken(document.getElementById("input").value);
+    const shown = q ? guides.filter((g) => token(g.name).includes(q) || token(g.slug).includes(q)) : guides;
+    const exact = q && guides.find((g) => token(g.name) === q || g.slug === q);
+    match.hidden = !exact;
+    if (exact) match.innerHTML = `There's already a guide for ${esc(exact.name)}. <a href="/guides/${encodeURIComponent(exact.slug)}">View it →</a>`;
+    list.innerHTML = shown.length
+      ? shown.map((g) => `<li><a href="/guides/${encodeURIComponent(g.slug)}">${esc(g.name)}</a>
           <span class="badge d-${g.difficulty}">${g.difficulty}</span>
           <span class="badge ${g.isLive ? "live" : "verified"}">${g.isLive ? "Agent-generated" : "Verified"}</span></li>`).join("")
-      : '<li class="muted">No guides yet.</li>';
+      : `<li class="muted">${q ? "No guide yet for this app. Generate one above." : "No guides yet."}</li>`;
   }
+
+  document.getElementById("input").addEventListener("input", renderLibrary);
 
   document.getElementById("generate").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -47,7 +70,11 @@
     const button = document.getElementById("submit");
     const log = document.getElementById("log");
     const errorBox = document.getElementById("error");
-    if (!input) return;
+    if (!input) {
+      errorBox.textContent = "Enter an app name or website, for example Zoom or https://asana.com.";
+      errorBox.hidden = false;
+      return;
+    }
     button.disabled = true;
     button.textContent = "Investigating…";
     errorBox.hidden = true;
