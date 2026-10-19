@@ -1,0 +1,8 @@
+node_modules/
+dist/
+data/
+.env
+.env with api keys
+src/seed/drafts/
+assesment.md
+oauth-guide-agent-BUILD-SPEC.md

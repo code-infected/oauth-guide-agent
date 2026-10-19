@@ -1,0 +1,33 @@
+{
+  "name": "oauth-guide-agent",
+  "version": "1.0.0",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "seed:drafts": "tsx src/seed/generate-drafts.ts"
+  },
+  "license": "UNLICENSED",
+  "description": "Look up an app and get a shareable guide to registering and getting approval for its OAuth app",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^18.0.8",
+    "express": "^5.3.0",
+    "openai": "^7.39.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}
