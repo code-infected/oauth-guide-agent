@@ -2,7 +2,7 @@
   "slug": "gmail",
   "app": {
     "name": "Gmail",
-    "website": "https://google.com",
+    "website": "https://mail.google.com",
     "docsUrl": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification"
   },
   "difficulty": "hard",

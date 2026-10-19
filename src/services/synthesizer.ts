@@ -27,6 +27,7 @@ Field guidance:
 - steps: ordered, concrete, mention the console/page names the docs use. Mark automatable=true only for steps an agent could realistically do (research, choosing scopes, drafting policy text, writing integration code, filling forms the developer is logged into); false for anything needing the developer's identity, legal acceptance, payment, domain ownership, or the provider's decision.
 - blockers: things that commonly stop or stall setup, each with what to do about it.
 - agentCanDo: what this research agent already did (it read the provider's docs listed in the sources) and what an agent could further do. youMustDo: what only the developer can do.
+- app.website is the product's own homepage (e.g. https://mail.google.com for Gmail), not the parent company's root domain when the two differ.
 - app.docsUrl must be one of the provided page URLs.`;
 
 export async function synthesize(name: string, websiteHint: string, pages: ExtractedPage[]): Promise<GuideDraft> {
