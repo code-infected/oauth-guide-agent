@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { InsufficientInfoError, runPipeline } from "../services/pipeline.js";
-import { saveGuide, uniqueSlug } from "../services/store.js";
+import { parseInput } from "../services/resolver.js";
+import { findExistingGuide, saveGuide, uniqueSlug } from "../services/store.js";
 
 export const generateRouter = Router();
 
@@ -18,10 +19,22 @@ generateRouter.post("/", async (req, res) => {
     res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" });
   }
 
+  // Same app already covered: return that guide instead of spending another pipeline run.
+  const { name, host } = parseInput(input);
+  const existing = findExistingGuide(name, host);
+  if (existing) {
+    if (!streaming) return res.json(existing);
+    send("status", { message: `Found an existing guide for ${existing.app.name}` });
+    send("guide", existing);
+    return res.end();
+  }
+
   try {
     const draft = await runPipeline(input, (message) => streaming && send("status", { message }));
-    const guide = { slug: uniqueSlug(draft.app.name), ...draft };
-    saveGuide(guide);
+    // The input may have been an alias ("Google Mail") for an app that already has a guide ("Gmail").
+    const known = findExistingGuide(draft.app.name);
+    const guide = known ?? { slug: uniqueSlug(draft.app.name), ...draft };
+    if (!known) saveGuide(guide);
     if (streaming) {
       send("guide", guide);
       return res.end();

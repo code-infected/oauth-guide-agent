@@ -46,6 +46,28 @@ export function listGuides(): GuideSummary[] {
   });
 }
 
+function hostOf(url: string): string {
+  try {
+    return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+// Finds a guide for the same app so "Linear", "linear.app" and "https://www.linear.app/" don't each trigger a new generation.
+export function findExistingGuide(name: string, host?: string): Guide | null {
+  const slug = slugify(name);
+  const bySlug = getGuide(slug);
+  if (bySlug) return bySlug;
+  const rows = db.prepare("SELECT json FROM guides ORDER BY is_live ASC, created_at ASC").all() as { json: string }[];
+  for (const { json } of rows) {
+    const g = JSON.parse(json) as Guide;
+    if (slugify(g.app.name) === slug) return g;
+    if (host && hostOf(g.app.website) === host.toLowerCase().replace(/^www\./, "")) return g;
+  }
+  return null;
+}
+
 // Seed guides are committed as JSON and (re)loaded on every start, so they survive redeploys.
 export function loadSeedGuides(dir: string): number {
   if (!fs.existsSync(dir)) return 0;

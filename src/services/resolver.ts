@@ -29,7 +29,7 @@ export function registrableDomain(host: string): string {
 
 const token = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-function parseInput(input: string): { name: string; host?: string } {
+export function parseInput(input: string): { name: string; host?: string } {
   const trimmed = input.trim();
   const looksLikeUrl = /^https?:\/\//i.test(trimmed) || (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(trimmed) && !trimmed.includes(" "));
   if (!looksLikeUrl) return { name: trimmed };
