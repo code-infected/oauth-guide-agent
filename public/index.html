@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OAuth App Setup Guides</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+  <h1>OAuth App Setup Guides</h1>
+  <p class="muted">What it takes to register an OAuth app with a provider and get it approved so your users can connect: how hard it is, how long it takes, what can block you, and what an agent can do for you.</p>
+
+  <section class="card">
+    <h2>Get a guide for any app</h2>
+    <form id="generate">
+      <input type="text" id="input" placeholder="App name or website, e.g. Zoom or https://asana.com" required maxlength="200">
+      <button type="submit" id="submit">Generate guide</button>
+    </form>
+    <p class="muted" style="font-size:13px;margin:8px 0 0">An agent searches the provider's own developer docs and drafts a guide from what it reads. This usually takes 30–90 seconds.</p>
+    <ul class="log" id="log"></ul>
+    <div class="error" id="error" hidden></div>
+  </section>
+
+  <section class="card">
+    <h2>Library</h2>
+    <p class="muted" style="font-size:13px;margin-top:-4px"><span class="badge verified">Verified</span> checked against the provider's live docs &nbsp; <span class="badge live">Agent-generated</span> produced live by the agent, not reviewed</p>
+    <ul class="library" id="library"><li class="muted">Loading…</li></ul>
+  </section>
+</main>
+<script>
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+  async function loadLibrary() {
+    const list = document.getElementById("library");
+    const guides = await fetch("/api/guides").then((r) => r.json());
+    list.innerHTML = guides.length
+      ? guides.map((g) => `<li><a href="/guides/${encodeURIComponent(g.slug)}">${esc(g.name)}</a>
+          <span class="badge d-${g.difficulty}">${g.difficulty}</span>
+          <span class="badge ${g.isLive ? "live" : "verified"}">${g.isLive ? "Agent-generated" : "Verified"}</span></li>`).join("")
+      : '<li class="muted">No guides yet.</li>';
+  }
+
+  document.getElementById("generate").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("input").value.trim();
+    const button = document.getElementById("submit");
+    const log = document.getElementById("log");
+    const errorBox = document.getElementById("error");
+    if (!input) return;
+    button.disabled = true;
+    button.textContent = "Investigating…";
+    errorBox.hidden = true;
+    log.innerHTML = "";
+    const addStatus = (message) => {
+      log.querySelectorAll("li.current").forEach((li) => li.classList.remove("current"));
+      log.insertAdjacentHTML("beforeend", `<li class="current">${esc(message)}</li>`);
+    };
+    const fail = (message) => {
+      log.querySelectorAll("li.current").forEach((li) => li.classList.remove("current"));
+      errorBox.textContent = message;
+      errorBox.hidden = false;
+      button.disabled = false;
+      button.textContent = "Generate guide";
+    };
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "text/event-stream" },
+        body: JSON.stringify({ input }),
+      });
+      if (!res.ok || !res.body) {
+        const body = await res.json().catch(() => ({}));
+        return fail(body.error || `Request failed (${res.status}).`);
+      }
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        let idx;
+        while ((idx = buffer.indexOf("\n\n")) !== -1) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          const event = /^event: (.*)$/m.exec(chunk)?.[1];
+          const data = JSON.parse(/^data: (.*)$/m.exec(chunk)?.[1] ?? "null");
+          if (event === "status") addStatus(data.message);
+          if (event === "guide") {
+            addStatus("Guide ready");
+            location.href = `/guides/${encodeURIComponent(data.slug)}`;
+            return;
+          }
+          if (event === "error") {
+            return fail(data.insufficient
+              ? `Couldn't find enough information about this app to build a guide. ${data.error}`
+              : data.error);
+          }
+        }
+      }
+      fail("The connection closed before the guide was finished. Please try again.");
+    } catch (err) {
+      fail("Couldn't reach the server. Please try again.");
+    }
+  });
+
+  loadLibrary();
+</script>
+</body>
+</html>
