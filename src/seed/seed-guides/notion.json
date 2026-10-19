@@ -1,0 +1,174 @@
+{
+  "slug": "notion",
+  "app": {
+    "name": "Notion",
+    "website": "https://notion.com",
+    "docsUrl": "https://developers.notion.com/guides/get-started/public-connections"
+  },
+  "difficulty": "moderate",
+  "effort": {
+    "activeTime": "~20-45 minutes to create the public connection and wire up OAuth; a few extra hours if you also prepare a Marketplace listing",
+    "waitTime": "none to let external users connect via your own OAuth link; 5-10 business days if you choose to submit a Marketplace listing"
+  },
+  "steps": [
+    {
+      "title": "Choose the right connection type",
+      "detail": "For an AI agent where outside users connect their own Notion workspaces, use a public connection (OAuth 2.0). Internal connections are scoped to a single workspace, and personal access tokens are user-scoped tokens for scripts, CLIs and tools, not an install flow for other users.",
+      "automatable": true
+    },
+    {
+      "title": "Decide installation scope before creating anything",
+      "detail": "Choose 'Any workspace' (any Notion user in any workspace can install; Marketplace-eligible) or 'Selected workspaces only' (only workspaces you pick at creation; not Marketplace-eligible). Scope is set once at creation and can't be changed. For a product serving arbitrary external users, choose 'Any workspace'.",
+      "automatable": true
+    },
+    {
+      "title": "Create the public connection in the Developer portal",
+      "detail": "Go to the Developer portal (https://app.notion.com/developers/connections), open the Build section of the sidebar, select Public connections, then Create new connection. Fill in the connection name and development workspace, redirect URI(s) for your OAuth callback, installation scope, and capabilities (read content, update content, insert content, etc.). Request only the capabilities your agent needs.",
+      "automatable": false
+    },
+    {
+      "title": "Retrieve OAuth credentials",
+      "detail": "Open the connection's Configuration tab and copy the OAuth client ID, OAuth client secret and the Authorization URL. Store the secret in your secrets manager; never expose it client-side.",
+      "automatable": false
+    },
+    {
+      "title": "Implement the OAuth authorization flow",
+      "detail": "Send users to https://api.notion.com/v1/oauth/authorize with client_id, redirect_uri, response_type=code and owner=user. Users pick which pages and databases to share in the page picker. Exchange the code with a POST to https://api.notion.com/v1/oauth/token using HTTP Basic auth (base64 of CLIENT_ID:CLIENT_SECRET) and grant_type=authorization_code. Include redirect_uri in the token request if you sent it in the authorization URL or have more than one redirect URI configured. Store the access and refresh tokens per user and workspace; refreshing (grant_type=refresh_token) returns a new access token and a new refresh token.",
+      "automatable": true
+    },
+    {
+      "title": "Handle rate limits and errors",
+      "detail": "Respect HTTP 429 (rate_limited) and 529 (service_overload) and wait the Retry-After seconds. Per-connection limits are 180 requests/minute (600 on Business/Enterprise workspaces), and a separate per-workspace budget is shared by all connections. Check additional_data.rate_limit_reason; 'public_api_request_blocked' means the connection's API access is restricted and needs Notion support.",
+      "automatable": true
+    },
+    {
+      "title": "Test with an external workspace",
+      "detail": "Authorize the connection from a Notion account and workspace that is not your development workspace. Confirm the page-picker step works and that your agent can only reach the shared pages.",
+      "automatable": false
+    },
+    {
+      "title": "(Optional) List on the Notion Marketplace",
+      "detail": "In the Marketplace listing dashboard, go to Listings > Connections and start a new connection listing with name, description, category, tags, images, logo and the associated public connection, then submit. Notion reviews every listing (including a security review) and replies by email, typically within 5-10 business days. Only needed for discoverability; public connections work independently of Marketplace listings.",
+      "automatable": false
+    }
+  ],
+  "gotchas": [
+    "Installation scope ('Any workspace' vs 'Selected workspaces only') is set at creation and can't be changed. Choosing 'Selected workspaces only' blocks arbitrary users and Marketplace listing, so you would need a new connection.",
+    "Users choose which pages and databases to share during OAuth, and the page picker only shows pages they have full access to. Your agent sees nothing the user didn't share, so build a 'add more pages' flow that sends them back through authorization.",
+    "Public connections act on behalf of the authorizing user. Tokens are per user and per workspace, and re-authorization may return a new access_token and refresh_token, so overwrite stored tokens.",
+    "Rate limits include a shared per-workspace budget, so you can be throttled even under your per-connection limit, and that Retry-After can exceed one minute.",
+    "The token request's redirect_uri rule is unusual: it is required if you passed redirect_uri in the authorization URL or have multiple redirect URIs configured, and otherwise not allowed.",
+    "Notion's Authorization guide has a caption saying the Authorization URL field 'populates after a public connection is submitted for review'. The Marketplace FAQ says public connections work independently of listings; if the Authorization URL is blank, build the URL yourself from the documented parameters or check the portal."
+  ],
+  "approval": {
+    "required": false,
+    "process": "No review gate is documented before external users can authorize an 'Any workspace' public connection; Notion's Marketplace FAQ says public connections work independently of Marketplace listings. Marketplace listing is optional and separate: Notion runs a security review and reviews every listing submission, sends feedback if changes are needed, and you can resubmit.",
+    "typicalWait": "none for direct OAuth use; 5-10 business days for optional Marketplace listing review",
+    "rejectionRisks": [
+      "Brand/trademark issues (Marketplace listing)",
+      "Quality concerns (Marketplace listing)",
+      "Not meeting baseline connection criteria (Marketplace listing)",
+      "Connection created with 'Selected workspaces only' scope is ineligible for Marketplace",
+      "Security review findings (required before Marketplace listing)"
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "Connection was created with 'Selected workspaces only' and outside users can't install it",
+      "whatToDo": "Create a new public connection with installation scope 'Any workspace'. Scope cannot be edited."
+    },
+    {
+      "issue": "Agent can't see the user's content after OAuth",
+      "whatToDo": "The user must select pages or databases in the OAuth page picker (only pages they have full access to appear). Send them back through authorization to change access."
+    },
+    {
+      "issue": "429 errors with reason public_api_request_blocked",
+      "whatToDo": "Retrying won't help. Contact Notion support."
+    },
+    {
+      "issue": "Marketplace listing rejected",
+      "whatToDo": "Read the emailed feedback, fix the brand, quality or criteria issues, and resubmit from Listings > Connections."
+    }
+  ],
+  "agentCanDo": [
+    "Recommend the public connection type and 'Any workspace' installation scope",
+    "Select minimal connection capabilities for the agent's use case",
+    "Write the OAuth authorization, callback, token-exchange and refresh code and per-user token storage",
+    "Implement rate-limit handling with Retry-After and rate_limit_reason checks",
+    "Draft Marketplace listing copy (name, description, category, tags)"
+  ],
+  "youMustDo": [
+    "Sign in to the Notion Developer portal with your own account and create the public connection",
+    "Choose and confirm the installation scope (irreversible)",
+    "Copy the client secret from the Configuration tab and store it securely",
+    "Host the redirect URI on a domain you control",
+    "Test authorization with a real external workspace",
+    "If listing on the Marketplace: provide brand assets, accept Marketplace terms, pass the security review, submit and respond to review feedback"
+  ],
+  "evidence": {
+    "verified": [
+      "Public connections use OAuth 2.0, and each authorizing user's access is per user (Overview and Authorization pages)",
+      "Developer portal is at app.notion.com/developers/connections, under Build > Public connections > Create new connection (Public connections page)",
+      "Creation fields include connection name and development workspace, redirect URI(s), installation scope (Any workspace or Selected workspaces only) and capabilities such as read, update and insert content (Public connections page)",
+      "OAuth client ID, client secret and Authorization URL are in the Configuration tab after creation (Public connections page)",
+      "'Any workspace' is Marketplace-eligible and 'Selected workspaces only' is not; installation scope can't be changed after creation (Public connections and Marketplace listing pages)",
+      "Public connections work independently of Marketplace listings (List on the Marketplace FAQ)",
+      "Notion reviews every listing submission and replies within 5-10 business days via email; rejection reasons include brand/trademark issues, quality concerns and baseline criteria; resubmission is allowed (List on the Marketplace page)",
+      "Public connections must undergo a Notion security review before being listed on the Marketplace (Overview page)",
+      "Authorize endpoint https://api.notion.com/v1/oauth/authorize with owner=user; token endpoint https://api.notion.com/v1/oauth/token with HTTP Basic auth; refresh returns a new access and refresh token (Authorization page)",
+      "Users choose pages and databases in an OAuth page picker that only shows pages they have full access to (Authorization and Overview pages)",
+      "Per-connection rate limit is 180 req/min, or 600 req/min on Business/Enterprise, plus a shared per-workspace limit; 429 rate_limited, 529 service_overload; public_api_request_blocked requires contacting support (Request limits page)"
+    ],
+    "inferred": [
+      "External users can authorize an 'Any workspace' public connection without any Notion review. The Marketplace FAQ says public connections work independently of listings, but the Authorization page caption mentioning 'submitted for review' leaves some ambiguity."
+    ],
+    "unverifiable": [
+      "What 'submitted for review' in the Authorization page caption refers to, and whether it ever delays the Authorization URL",
+      "Whether any user caps apply to unlisted public connections (none documented)",
+      "Access and refresh token lifetimes (not stated in the docs)",
+      "Per-workspace rate limit values (docs say only that it scales with plan)"
+    ],
+    "review": [
+      "Confirmed: portal path, creation fields, irreversible installation scope and Configuration tab credentials at https://developers.notion.com/guides/get-started/public-connections; added the portal URL (app.notion.com/developers/connections) and Build > Public connections path.",
+      "Corrected: draft listed authorization/token endpoint details as unverifiable; https://developers.notion.com/guides/get-started/authorization documents /v1/oauth/authorize (owner=user), /v1/oauth/token with Basic auth, refresh_token grant and the redirect_uri inclusion rule, now added to the steps.",
+      "Confirmed: the 'no review before external users' inference is now directly supported; https://developers.notion.com/guides/get-started/marketplace-listing FAQ says 'Public connections work independently of Marketplace listings'. Listing review is 5-10 business days.",
+      "Could not verify: https://developers.notion.com/guides/get-started/authorization has an image caption saying the Authorization URL field 'populates after a public connection is submitted for review'; no review process is described anywhere, so it is noted as a gotcha.",
+      "Corrected: draft said users can share pages via the 'Add connections' menu for public connections; https://developers.notion.com/guides/get-started/overview ties that menu to internal connections and describes an OAuth page picker for public connections.",
+      "Confirmed: 180/600 req/min per connection, shared per-workspace budget, 429/529 codes and public_api_request_blocked at https://developers.notion.com/reference/request-limits.",
+      "Corrected: removed the speculative inference that the portal asks for company name, website, privacy policy or terms URLs; the Public connections page lists no such fields.",
+      "Corrected: dropped irrelevant sources (Snowflake MCP help page, Workers SDK reference, Admin API scopes, Indonesian help page duplicate) and the Admin API scopes gotcha, which wasn't relevant to public OAuth connections."
+    ]
+  },
+  "sources": [
+    {
+      "title": "Public connections - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/public-connections"
+    },
+    {
+      "title": "Authorization - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/authorization"
+    },
+    {
+      "title": "Overview - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/overview"
+    },
+    {
+      "title": "List on the Marketplace - Notion Docs",
+      "url": "https://developers.notion.com/guides/get-started/marketplace-listing"
+    },
+    {
+      "title": "Request limits - Notion Docs",
+      "url": "https://developers.notion.com/reference/request-limits"
+    },
+    {
+      "title": "Marketplace guidelines & terms – Notion Help Center",
+      "url": "https://notion.com/help/template-gallery-guidelines-and-terms"
+    },
+    {
+      "title": "Create integrations with the Notion API | Notion Help Center",
+      "url": "https://www.notion.com/help/create-integrations-with-the-notion-api"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

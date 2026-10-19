@@ -1,0 +1,218 @@
+{
+  "slug": "slack",
+  "app": {
+    "name": "Slack",
+    "website": "https://slack.com",
+    "docsUrl": "https://docs.slack.dev/authentication/installing-with-oauth"
+  },
+  "difficulty": "moderate",
+  "effort": {
+    "activeTime": "~30-60 minutes to create, configure and distribute the app; additional days to prepare a Marketplace submission (listing, landing/support/privacy pages, scope justifications)",
+    "waitTime": "none for external workspaces to install via public (unlisted) distribution; Marketplace review, if pursued, is up to 10 business days preliminary plus up to 10 weeks functional review, and you need 10+ active workspaces before you can submit"
+  },
+  "steps": [
+    {
+      "title": "Optionally join the Slack Developer Program for a sandbox",
+      "detail": "Join the Developer Program to provision a developer sandbox for building and testing (basic sandboxes for any member; full-featured ones need a paid-plan workspace at least 30 days old or a payment method on file, which isn't charged). Sandboxes cannot be used to distribute third-party apps.",
+      "automatable": false
+    },
+    {
+      "title": "Create a Slack app",
+      "detail": "Go to https://api.slack.com/apps and create a new app, from scratch or from an app manifest. At first it can only be installed in its development workspace.",
+      "automatable": false
+    },
+    {
+      "title": "Choose minimal bot and user scopes",
+      "detail": "Under Features > OAuth & Permissions (or in the manifest), add only the bot and user scopes your agent needs, e.g. channels:read, chat:write. Apps have no access by default. Bot scopes belong to the app; user scopes act as the authorizing user. Broad scopes such as *:history, search:read.*, files:read and canvases:read draw enhanced Marketplace review.",
+      "automatable": true
+    },
+    {
+      "title": "Configure Redirect URLs",
+      "detail": "In Features > OAuth & Permissions > Redirect URLs, add your HTTPS callback, e.g. https://yourapp.com/slack/oauth/callback. Redirect URLs must use HTTPS and cannot contain an anchor (#); the redirect_uri you send must match a configured URL or be a subdirectory of it (scheme, host and port must match).",
+      "automatable": true
+    },
+    {
+      "title": "Copy credentials",
+      "detail": "From Settings > Basic Information > App Credentials, store the Client ID, Client Secret and Signing Secret securely.",
+      "automatable": false
+    },
+    {
+      "title": "Enable public distribution",
+      "detail": "Go to Settings > Manage Distribution, complete every item in the 'Share Your App with Other Workspaces' checklist, then click Activate Public Distribution. You get an Add to Slack button and a shareable install URL. Endpoints (redirect, interactivity, options load, Events API) must support SSL.",
+      "automatable": false
+    },
+    {
+      "title": "Implement the OAuth install flow",
+      "detail": "Build an install endpoint that redirects to https://slack.com/oauth/v2/authorize with client_id, scope (bot scopes), user_scope (if you need user tokens), redirect_uri and state. Verify state on callback, then exchange the code (valid 10 minutes) via oauth.v2.access with code, client_id and client_secret, sending the same redirect_uri if you have several configured. Store per-workspace tokens; user tokens are under authed_user. Bolt SDKs can handle this.",
+      "automatable": true
+    },
+    {
+      "title": "Test installation in a second workspace",
+      "detail": "Install via your install URL in a workspace other than the development one (e.g. a second sandbox workspace) and test uninstall too, to confirm the external flow works.",
+      "automatable": true
+    },
+    {
+      "title": "Decide whether to submit to the Slack Marketplace",
+      "detail": "New installs of non-Marketplace (unlisted) commercially distributed apps are limited to 1 request/minute and 15 objects per request on conversations.history and conversations.replies, and Slack's terms describe unlisted apps as for development and testing, not commercial distribution. If your agent reads message history or you're selling commercially, plan a Marketplace submission. Eligibility requires the app be installed on 10+ active workspaces (used in the past 28 days, excluding sandboxes), be finished and publicly available, and meet guidelines including AI rules (no training LLMs on Slack data, model/retention/residency disclosures, an accuracy disclaimer). Submit from 'Submit to the Slack Marketplace' in app settings.",
+      "automatable": false
+    },
+    {
+      "title": "Respond to review feedback and maintain the approved app",
+      "detail": "Address reviewer feedback (resubmitting during preliminary review resets your queue place). After approval the live app config is locked: scope or feature changes require resubmission with a video demo and a staging app, and you must update your OAuth URLs to the new scopes and prompt users to reinstall.",
+      "automatable": false
+    }
+  ],
+  "gotchas": [
+    "A new app installs only in its development workspace until you activate public distribution under Settings > Manage Distribution.",
+    "Disabling public distribution later removes the app from every workspace except the original one.",
+    "Redirect URLs must be HTTPS (no plain-http localhost) and cannot contain '#'.",
+    "Since May 29, 2025, new unlisted apps and new installs of existing unlisted apps are limited to 1 request/minute and max 15 objects per request on conversations.history and conversations.replies. Existing installs, Marketplace apps and internal customer-built apps are not affected. This is crippling for agents that read conversations.",
+    "Slack's updated API Terms frame unlisted apps as for development and testing, not large-scale or commercial distribution.",
+    "Marketplace submission is gated on 10+ active workspaces; you can't submit a brand-new app.",
+    "Marketplace review can't be skipped or accelerated: up to 10 business days preliminary plus up to 10 weeks functional review for new apps (6 weeks for resubmissions of published apps).",
+    "AI apps must not train LLMs on Slack data and must disclose model, retention, tenancy and residency; MCP-server-only apps don't qualify for the Marketplace.",
+    "Adding scopes to a Marketplace-approved app requires a new review; config changes don't affect the published app until resubmitted and published.",
+    "Coded workflow apps are not currently eligible for Marketplace listing.",
+    "Developer sandboxes can't be used to distribute third-party apps and cap at 8 users; up to 2 active sandboxes at a time.",
+    "Standard Slack OAuth tokens don't expire until revoked or uninstalled unless you enable token rotation."
+  ],
+  "approval": {
+    "required": false,
+    "process": "No review is needed for external workspaces to install a publicly distributed (unlisted) app. Marketplace listing is optional but needed to avoid the reduced conversations.history/replies rate limits and is what Slack expects for commercial distribution. It requires 10+ active workspaces, then a preliminary review (listing, docs, scope justifications, installability) and a functional review (testing functionality and scopes, plus a security review), usually with feedback rounds.",
+    "typicalWait": "none for unlisted installs; Marketplace: up to 10 business days preliminary + up to 10 weeks functional review (estimate shown on the submission page)",
+    "rejectionRisks": [
+      "Fewer than 10 active workspaces (cannot submit)",
+      "Requesting scopes not justified by the app's functionality, or broad data scopes without a clear use case",
+      "Missing or inadequate landing page, support page or privacy policy",
+      "Not meeting AI/LLM requirements (training on Slack data, missing disclosures or accuracy disclaimer)",
+      "App type not supported for listing, e.g. coded workflows or MCP-server-only apps",
+      "Unaddressed reviewer feedback during the review rounds"
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "Agent needs to read message history, but new unlisted installs are limited to 1 req/min and 15 objects on conversations.history/replies",
+      "whatToDo": "Get to 10 active workspaces and submit for Marketplace approval early. Meanwhile, design around Events API message events where possible."
+    },
+    {
+      "issue": "Can't submit to the Marketplace yet because the app has fewer than 10 active workspaces",
+      "whatToDo": "Run a pilot via public (unlisted) distribution with early customers until you reach 10 active non-sandbox workspaces."
+    },
+    {
+      "issue": "App only installs in the development workspace",
+      "whatToDo": "Add an HTTPS Redirect URL and complete the Settings > Manage Distribution checklist, then Activate Public Distribution."
+    },
+    {
+      "issue": "bad_redirect_uri errors",
+      "whatToDo": "Use an HTTPS URL that matches (or is a subdirectory of) a configured Redirect URL, and send the same redirect_uri to both the authorize URL and oauth.v2.access."
+    },
+    {
+      "issue": "Marketplace review timeline conflicts with launch",
+      "whatToDo": "Budget up to ~12 weeks (10 business days preliminary + up to 10 weeks functional). Slack won't expedite."
+    },
+    {
+      "issue": "Need to add scopes after Marketplace approval",
+      "whatToDo": "Resubmit for review with a video demo and staging app, then update OAuth URLs and ask users to reinstall."
+    },
+    {
+      "issue": "No safe workspace to test multi-workspace installs",
+      "whatToDo": "Join the Developer Program and provision sandboxes (up to 2 active, up to 5 workspaces each for full-featured sandboxes)."
+    }
+  ],
+  "agentCanDo": [
+    "Read Slack's docs on OAuth installation, distribution, scopes, Marketplace guidelines and review, rate-limit changes and developer sandboxes",
+    "Recommend a minimal bot/user scope set for the agent's features",
+    "Draft an app manifest with scopes, HTTPS redirect URLs and event subscriptions",
+    "Write the OAuth install and callback code (e.g. with Bolt), state verification and token storage",
+    "Draft Marketplace listing copy, scope justifications, AI disclosures and privacy/support text",
+    "Fill in app settings forms if the developer is logged in"
+  ],
+  "youMustDo": [
+    "Sign in to api.slack.com and create the app under your Slack account",
+    "Accept the Slack API Terms of Service and Developer Policy",
+    "Own and host the public HTTPS redirect domain",
+    "Securely store the Client Secret and Signing Secret",
+    "Activate public distribution in Manage Distribution",
+    "Recruit 10+ active workspaces before a Marketplace submission",
+    "Decide on and submit for Marketplace review, then answer reviewer feedback",
+    "Join the Developer Program and provision sandboxes if desired"
+  ],
+  "evidence": {
+    "verified": [
+      "App Distribution (Java SDK) page: a new app installs only in its development workspace until a Redirect URL is set and distribution enabled; Settings > Manage Distribution; credentials at Settings > Basic Information > App Credentials; Redirect URLs at Features > OAuth & Permissions > Redirect URLs.",
+      "Distributing your app page: complete the Manage Distribution checklist and click Activate Public Distribution; SSL required for redirect and request URLs; disabling distribution removes the app from other workspaces; commercial apps should go to the Marketplace.",
+      "Installing with OAuth page: authorize URL params client_id, scope, user_scope, redirect_uri, state, team; oauth.v2.access exchange; code expires in 10 minutes; redirect URLs must be HTTPS, no anchors, match or be a subdirectory; standard tokens don't expire unless token rotation is used.",
+      "Scopes page: an app has no access by default; scopes are requested during the OAuth flow.",
+      "Rate limit changes page (2025-05-29): new unlisted apps/new installs limited to 1 request per minute and 15 objects on conversations.history/replies; existing installs, Marketplace and internal apps unaffected; unlisted apps are 'for development and testing'; Slack performs a security review before Marketplace publication.",
+      "Marketplace review guide: up to 10 business days preliminary and up to 10 weeks functional review (6 weeks for resubmissions); can't be skipped or accelerated; 10+ active workspaces required; coded workflows not eligible; post-approval scope changes require resubmission.",
+      "Marketplace guidelines: 10 active workspaces/weekly users minimum; landing, support and privacy pages; AI rules (no LLM training on Slack data, disclosures, accuracy disclaimer); enhanced review for broad data scopes; MCP-server-only apps don't qualify.",
+      "Developer sandboxes page: max 8 users, 2 active sandboxes, up to 5 workspaces (basic: 2), cannot be used to distribute third-party apps."
+    ],
+    "inferred": [
+      "Workspace admins at customer organizations may require app approval before members can install (the distribution page notes admins weigh requested permissions during approval, but per-workspace approval settings were not checked).",
+      "Bolt SDKs' built-in OAuth handling is the typical implementation (general knowledge).",
+      "Active-time estimates are general estimates."
+    ],
+    "unverifiable": [
+      "Full itemized contents of the Manage Distribution checklist (docs say only to complete all items in the supplied checklist)",
+      "Token rotation access-token lifetime (not stated on the installing-with-oauth page)",
+      "Whether PKCE is supported in the standard v2 install flow (not mentioned on the page checked)"
+    ],
+    "review": [
+      "Corrected: draft said localhost redirect URLs work in development (from a legacy Sign in with Slack page); https://docs.slack.dev/authentication/installing-with-oauth says redirect URLs must use HTTPS and cannot contain '#'.",
+      "Corrected: draft said Marketplace review needs 'at least a few weeks'; https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide says up to 10 business days preliminary plus up to 10 weeks functional review (6 weeks for resubmissions).",
+      "Corrected: draft omitted that Marketplace submission requires 10+ active workspaces; stated in the review guide and https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements.",
+      "Corrected: added AI/LLM Marketplace requirements (no training on Slack data, disclosures, disclaimer, enhanced review for *:history and similar scopes) from https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements.",
+      "Corrected: draft implied the rate limits apply to all unlisted installs; https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps says they apply to new unlisted apps and new installations from May 29, 2025, with existing installs and internal apps unaffected. The 1 req/min and 15-object limits are confirmed.",
+      "Confirmed: public distribution needs no review and is activated via Settings > Manage Distribution > Activate Public Distribution, at https://docs.slack.dev/distribution; also added that disabling distribution removes the app from other workspaces.",
+      "Confirmed: credential and Redirect URL locations at https://docs.slack.dev/tools/java-slack-sdk/guides/app-distribution; oauth.v2.access exchange (moved from inferred to verified) at https://docs.slack.dev/authentication/installing-with-oauth.",
+      "Confirmed: sandbox limits (8 users, 2 active, 5 workspaces, no distribution) at https://docs.slack.dev/tools/developer-sandboxes.",
+      "Could not verify: the itemized Manage Distribution checklist, workspace-admin app approval behavior, and PKCE support; removed the unverified claim that the Sharable URL displays scope/user_scope.",
+      "Corrected: app.website changed from slack.dev to https://slack.com; dropped irrelevant sources (legacy SIWS, Deno open-authorization tutorial, 2018 workspace-token changelog)."
+    ]
+  },
+  "sources": [
+    {
+      "title": "Installing with OAuth | Slack Developer Docs",
+      "url": "https://docs.slack.dev/authentication/installing-with-oauth"
+    },
+    {
+      "title": "Distributing your app | Slack Developer Docs",
+      "url": "https://docs.slack.dev/distribution"
+    },
+    {
+      "title": "App Distribution (OAuth) | Slack Developer Docs",
+      "url": "https://docs.slack.dev/tools/java-slack-sdk/guides/app-distribution"
+    },
+    {
+      "title": "Scopes | Slack Developer Docs",
+      "url": "https://docs.slack.dev/reference/scopes"
+    },
+    {
+      "title": "Less is more: a Slack approach to scopes | Blog | Slack Developers",
+      "url": "https://slack.dev/least-privilege-a-slack-approach-to-scopes"
+    },
+    {
+      "title": "Rate limit changes for non-Marketplace apps | Slack Developer Docs",
+      "url": "https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps"
+    },
+    {
+      "title": "Slack Marketplace review guide | Slack Developer Docs",
+      "url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-review-guide"
+    },
+    {
+      "title": "Slack Marketplace app guidelines and requirements | Slack Developer Docs",
+      "url": "https://docs.slack.dev/slack-marketplace/slack-marketplace-app-guidelines-and-requirements"
+    },
+    {
+      "title": "Slack developer FAQ | Slack Developer Docs",
+      "url": "https://docs.slack.dev/faq"
+    },
+    {
+      "title": "Developer sandboxes | Slack Developer Docs",
+      "url": "https://docs.slack.dev/tools/developer-sandboxes"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

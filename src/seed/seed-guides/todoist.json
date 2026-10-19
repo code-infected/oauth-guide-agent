@@ -1,0 +1,187 @@
+{
+  "slug": "todoist",
+  "app": {
+    "name": "Todoist",
+    "website": "https://todoist.com",
+    "docsUrl": "https://developer.todoist.com/api/v1/#tag/Authorization"
+  },
+  "difficulty": "trivial",
+  "effort": {
+    "activeTime": "~15 minutes to register the app; a few hours to implement and test the OAuth flow including refresh-token rotation",
+    "waitTime": "none (self-serve). The optional integrations-directory certification aims to respond within ten business days, but it is not needed for users to authorize your app."
+  },
+  "steps": [
+    {
+      "title": "Sign in to Todoist",
+      "detail": "Log in to (or create) the Todoist account that will own the OAuth app. Consider using a shared company account rather than a personal one.",
+      "automatable": false
+    },
+    {
+      "title": "Create the app in the App Management Console",
+      "detail": "Open the App Management Console at https://app.todoist.com/app/settings/integrations/app-management and create a new app. You are given a Client ID and Client Secret.",
+      "automatable": false
+    },
+    {
+      "title": "Configure OAuth2 redirect URL(s)",
+      "detail": "Add one or more valid OAuth2 redirect URLs, such as your production callback and a localhost callback for development. If more than one redirect URL is configured, you must send redirect_uri in the authorization request. If none is configured, the authorize request fails with a JSON error shown in the browser.",
+      "automatable": true
+    },
+    {
+      "title": "Copy the Client ID and Client Secret",
+      "detail": "Store both in your secrets manager and never ship the secret to clients.",
+      "automatable": false
+    },
+    {
+      "title": "Choose scopes",
+      "detail": "Request the minimum scopes your agent needs. The documented scopes are task:add (add tasks only), data:read (read tasks, projects, labels, filters), data:read_write (read and write; includes task:add and data:read), data:delete (delete tasks, labels, filters), project:delete (delete projects) and backups:read (list backups without MFA).",
+      "automatable": true
+    },
+    {
+      "title": "Implement the authorization redirect",
+      "detail": "Send users to https://app.todoist.com/oauth/authorize with client_id, scope and state. The state parameter is required; abort if it does not match on the callback. Also send redirect_uri if multiple are registered. response_type is optional and must be code if set.",
+      "automatable": true
+    },
+    {
+      "title": "Exchange the code for tokens",
+      "detail": "POST client_id, client_secret and code to https://api.todoist.com/oauth/access_token. New apps use refresh tokens by default: the response includes access_token, expires_in (3600 seconds), refresh_token and scope. Store the tokens per user.",
+      "automatable": true
+    },
+    {
+      "title": "Implement token refresh",
+      "detail": "POST grant_type=refresh_token, client_id, client_secret and refresh_token to the same token endpoint. Refresh tokens rotate on every refresh, so always persist the newest one. Reusing a consumed refresh token more than 60 seconds later is treated as replay and revokes all of that user's tokens for your app.",
+      "automatable": true
+    },
+    {
+      "title": "Optional: use dynamic client registration instead",
+      "detail": "POST https://api.todoist.com/oauth/register (RFC 7591, no authentication) with redirect_uris (required; up to 10, HTTPS unless localhost) and optional client_name, scope (defaults to data:read_write), grant_types, response_types and token_endpoint_auth_method. It returns a tdd_-prefixed client_id. Alternatively, a public client can use an HTTPS Client ID Metadata Document URL as its client_id with token_endpoint_auth_method none and PKCE. This is useful for MCP-style or per-tenant clients.",
+      "automatable": true
+    },
+    {
+      "title": "Test with a second, external Todoist account",
+      "detail": "Authorize the app from a Todoist account other than the owner's. This confirms that real external users can connect.",
+      "automatable": false
+    },
+    {
+      "title": "Optional: submit the integration for certification",
+      "detail": "To be listed on Todoist's Integrations pages, submit the integration for certification (submission, technical and marketing review). This is optional. Todoist states that certification isn't required to develop with the APIs and share your integration with users.",
+      "automatable": false
+    }
+  ],
+  "gotchas": [
+    "Access tokens for new apps expire after 1 hour (expires_in 3600). You must implement refresh, and refresh tokens rotate on every use.",
+    "Replaying a consumed refresh token after the 60-second grace window revokes all of the user's tokens for your app, and the user has to re-authorize. Avoid races between concurrent refreshes.",
+    "Legacy apps get long-lived tokens with no refresh token. They can opt in to refresh tokens in the console, but this is one-way.",
+    "An expired or invalid token returns HTTP 401 with error code 477. Refresh and retry; don't retry the same token.",
+    "The authorize redirect can return invalid_application_status if the app hits its token limit or is suspended for abuse.",
+    "Todoist's current API is the unified API v1 (developer.todoist.com/api/v1). The older REST v2 and Sync v9 docs are legacy, so build against v1.",
+    "The personal API token (Settings → Integrations → Developer) only accesses the developer's own account. Use OAuth for end users.",
+    "If your agent only needs MCP-based access, Todoist already hosts an MCP server with its own OAuth. Decide whether you need your own app at all."
+  ],
+  "approval": {
+    "required": false,
+    "process": "None for authorization. The app is self-serve in the App Management Console, and any Todoist user can authorize it. Optional certification for listing on Todoist's Integrations pages covers submission, technical and marketing review.",
+    "typicalWait": "none (optional certification: Todoist aims to respond within ten business days)",
+    "rejectionRisks": [
+      "Optional certification only: form fields not in English.",
+      "Optional certification only: the app duplicates existing Todoist features or has functional errors during testing.",
+      "Optional certification only: the app integrates only via Zapier, IFTTT or email forwarding rather than directly.",
+      "Optional certification only: links that aren't HTTPS, misuse of the Todoist brand, or a privacy policy that allows selling or sharing user data without consent."
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "Redirect URI errors during authorization",
+      "whatToDo": "Register at least one redirect URL in the App Management Console. If you register several, pass the exact redirect_uri in the authorize request."
+    },
+    {
+      "issue": "Users get logged out after about an hour, or all of a user's tokens are suddenly revoked",
+      "whatToDo": "Implement refresh with rotation. Persist the new refresh_token atomically and serialize refreshes per user to avoid replay-triggered revocation."
+    },
+    {
+      "issue": "Code written against legacy REST v2 / Sync v9 endpoints",
+      "whatToDo": "Build against the unified API v1 and the official Python/TypeScript SDKs."
+    }
+  ],
+  "agentCanDo": [
+    "Read the Todoist API v1 authorization docs and the integration certification help page",
+    "Choose minimal scopes and draft the authorization URL",
+    "Write the OAuth redirect, callback (state check), token exchange, rotating refresh and revocation code",
+    "Implement dynamic client registration via /oauth/register if desired",
+    "Write API v1 integration code using the official SDKs",
+    "Draft listing copy for the optional certification submission"
+  ],
+  "youMustDo": [
+    "Log in to Todoist and create the app in the App Management Console",
+    "Register production redirect URLs on domains you control",
+    "Securely store the Client Secret",
+    "Accept Todoist's Terms of Service",
+    "Test authorization with a separate external Todoist account",
+    "Decide whether to submit the integration for optional certification"
+  ],
+  "evidence": {
+    "verified": [
+      "App Management Console is at https://app.todoist.com/app/settings/integrations/app-management; apps get a Client ID and Client Secret and must configure one or more OAuth2 redirect URLs (developer.todoist.com/api/v1)",
+      "Authorize endpoint https://app.todoist.com/oauth/authorize takes client_id, scope and a required state; redirect_uri is required only when multiple redirect URLs are configured (developer.todoist.com/api/v1)",
+      "Scopes: task:add, data:read, data:read_write, data:delete, project:delete, backups:read (developer.todoist.com/api/v1)",
+      "Token exchange is a POST to https://api.todoist.com/oauth/access_token with client_id, client_secret and code. New apps get refresh tokens by default, with expires_in 3600. Legacy apps get long-lived tokens (developer.todoist.com/api/v1)",
+      "Refresh tokens rotate on each refresh, with a 60-second grace window for retries; replay after that revokes all of the user's tokens for the app (developer.todoist.com/api/v1)",
+      "Expired or invalid tokens return 401 with error code 477 (developer.todoist.com/api/v1)",
+      "invalid_application_status is returned when the token limit is exceeded or the app is suspended for abuse (developer.todoist.com/api/v1)",
+      "Dynamic client registration at POST /oauth/register (RFC 7591): no auth, up to 10 redirect_uris that are HTTPS unless localhost, scope defaults to data:read_write, returns a tdd_ client_id. Client ID Metadata Documents require token_endpoint_auth_method none and PKCE (developer.todoist.com/api/v1)",
+      "Certification is optional: 'Certification isn't required to develop with the Todoist APIs and share the resulting integration with users.' Todoist aims to respond within ten business days (todoist.com Market your Todoist integration help page)",
+      "Personal API token is under Settings → Integrations → Developer (Find your API token help page)"
+    ],
+    "inferred": [
+      "Any Todoist user can authorize an OAuth app immediately after creation. No review gate is documented, and the certification page explicitly says it isn't required to share an integration with users.",
+      "Todoist hosts its own MCP server for AI assistants (from the draft's help-center source; not re-checked)"
+    ],
+    "unverifiable": [
+      "Exact API request/rate limits (the Request limits section body was not readable in the fetched docs)",
+      "What the per-app 'token limit' behind invalid_application_status is",
+      "Whether a privacy policy URL or other app metadata is required in the App Management Console",
+      "Any restrictions on commercial or AI-agent use in developer-specific terms"
+    ],
+    "review": [
+      "Confirmed: app registration in the App Management Console (https://app.todoist.com/app/settings/integrations/app-management) with Client ID/Secret and redirect URLs — https://developer.todoist.com/api/v1/",
+      "Corrected: the scope list is now verified, adding backups:read. It was previously marked as general knowledge — https://developer.todoist.com/guides",
+      "Corrected: the draft said token lifetime and refresh were unknown and that tokens historically don't expire. New apps get 1-hour access tokens with rotating refresh tokens and replay revocation — https://developer.todoist.com/guides",
+      "Corrected: state is required, and redirect_uri is only required at authorize when multiple URLs are registered. The token-exchange required params are client_id, client_secret and code — https://developer.todoist.com/api/v1/",
+      "Corrected: the optional listing review is 'certification' (submission, technical and marketing review) with a ten-business-day target. It is explicitly not required to share an integration with users — https://www.todoist.com/help/articles/market-your-todoist-integration-B6C5sCKkn",
+      "Confirmed: dynamic client registration and Client ID Metadata Documents details (redirect_uris limit, HTTPS rule, tdd_ prefix, PKCE) — https://developer.todoist.com/guides",
+      "Could not verify: numeric API rate limits. The Request limits section body was not returned when fetching https://developer.todoist.com/api/v1/",
+      "Could not verify: the draft's claims about /api/v1/ids_mapping and /api/v1/tasks/filter beyond nav entries, so those gotchas were removed — https://developer.todoist.com/api/v1/"
+    ]
+  },
+  "sources": [
+    {
+      "title": "Todoist API v1",
+      "url": "https://developer.todoist.com/api/v1/"
+    },
+    {
+      "title": "Todoist API",
+      "url": "https://developer.todoist.com/guides#authorization"
+    },
+    {
+      "title": "Todoist Developers — Build with Todoist",
+      "url": "https://developer.todoist.com"
+    },
+    {
+      "title": "Market your Todoist integration",
+      "url": "https://www.todoist.com/help/articles/market-your-todoist-integration-B6C5sCKkn"
+    },
+    {
+      "title": "Find your API token",
+      "url": "https://www.todoist.com/help/todoist/integrations/find-your-api-token-Jpzx9IIlB"
+    },
+    {
+      "title": "Connect Todoist to an AI assistant",
+      "url": "https://www.todoist.com/help/todoist/todoist-and-ai/connect-todoist-to-an-ai-assistant-xMSzFfHng"
+    },
+    {
+      "title": "Terms of Service | Todoist",
+      "url": "https://www.todoist.com/terms-of-service"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

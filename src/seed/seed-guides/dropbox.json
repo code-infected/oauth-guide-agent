@@ -1,0 +1,187 @@
+{
+  "slug": "dropbox",
+  "app": {
+    "name": "Dropbox",
+    "website": "https://dropbox.com",
+    "docsUrl": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide"
+  },
+  "difficulty": "moderate",
+  "effort": {
+    "activeTime": "~30-60 minutes to create and configure the app; a few more hours to implement the OAuth flow",
+    "waitTime": "none to start with up to 50 linked users; production review only starts after 50 users are linked (unless early review is granted) and its duration is not published"
+  },
+  "steps": [
+    {
+      "title": "Create an app in the App Console",
+      "detail": "Sign in at https://www.dropbox.com/developers/apps and create a new app with scoped access. Choose a content access type: App Folder (the app can only act inside its own folder) or Full Dropbox (all content in the user's account). Decide whether it is a user-level Dropbox API app or a team (Business) app. The new app starts in development status and can only be connected to your own account.",
+      "automatable": false
+    },
+    {
+      "title": "Select scopes on the Permissions tab",
+      "detail": "On the app's 'Permissions' tab, enable only the scopes your agent needs, such as files.content.read or account_info.read. The selected scopes are applied to issued access tokens and are shown to the end user on the authorization page. Dropbox asks you to request the least permissions required, and production reviewers check for unnecessarily broad permissions.",
+      "automatable": true
+    },
+    {
+      "title": "Register OAuth redirect URIs",
+      "detail": "On the app's settings page, register the exact redirect URI(s) your backend uses. Dropbox checks the redirect_uri in the authorization URL against the registered values. Redirect URIs only need to be reachable by the user's browser, so localhost works for development. Webhook URIs are registered separately and must be publicly reachable.",
+      "automatable": true
+    },
+    {
+      "title": "Copy the app key and secret",
+      "detail": "Store the App key (client_id) and App secret (client_secret) securely in your backend configuration. If your client can't keep a secret (mobile, desktop or single-page app), use PKCE instead.",
+      "automatable": false
+    },
+    {
+      "title": "Implement the authorization code flow",
+      "detail": "Send users in a browser to https://www.dropbox.com/oauth2/authorize with client_id, response_type=code, redirect_uri, state, and optionally scope. This is a user-facing web page, not an API call. Add token_access_type=offline to receive a refresh token alongside the short-lived access token. Exchange the code at /oauth2/token as form-encoded POST parameters, then send the access token as an 'Authorization: Bearer' header. Refresh with grant_type=refresh_token when the access token expires.",
+      "automatable": true
+    },
+    {
+      "title": "Enable additional users for early external users",
+      "detail": "On the app's info page in the App Console, click 'Enable additional users' so accounts other than yours can link while the app is in development status.",
+      "automatable": false
+    },
+    {
+      "title": "Apply for production status once you reach 50 linked users",
+      "detail": "From the App Console, apply for production status. Dropbox won't review submissions until the app has linked at least 50 users, unless you ask for an exception in the 'Request early review' field. Once 50 users are linked, you have two weeks to apply for and receive approval, or linking of new users freezes. Development status caps the app at 500 linked users in total; after approval any number of users can link.",
+      "automatable": false
+    },
+    {
+      "title": "Prepare production application materials",
+      "detail": "The application asks for more information, such as how your app uses the API, and an app icon upload. Be descriptive, since Dropbox says more detail may speed approval. Make sure the app follows the Dropbox developer branding guidelines and terms. It may say it uses Dropbox, but must not imply Dropbox endorsement or partnership, or it will be rejected.",
+      "automatable": true
+    }
+  ],
+  "gotchas": [
+    "New apps start in development status and can only link your own account until you click 'Enable additional users'.",
+    "Production review won't start until the app has linked at least 50 users (unless early review is granted). From that point you have only two weeks to apply for and receive approval, otherwise new-user linking freezes even below the 500-user development cap.",
+    "Unlinking users does not unfreeze a frozen app. The only way to unfreeze it is to apply for and receive production status.",
+    "The scope parameter on /oauth2/authorize may only include scopes already enabled in the Permissions tab. Requesting others causes errors such as 'This app is not valid'.",
+    "token_access_type accepts 'online' (short-lived access token only) or 'offline' (adds a refresh token). Values such as 'team' are invalid.",
+    "/oauth2/authorize is a web page the user must visit and interact with. Calling it server-side just returns a redirect.",
+    "Dropbox access tokens are short-lived (the expiry is returned by /oauth2/token). Without token_access_type=offline there's no refresh token, which breaks background agent access.",
+    "/oauth2/token expects application/x-www-form-urlencoded POST parameters, not JSON.",
+    "Development-status apps show an extra 'Before you connect this app...' interstitial page, which disappears with production status.",
+    "Scoped apps show a longer permissions consent page. Minimize scopes to reduce friction, because you can't revert to legacy non-scoped permissions.",
+    "Dropbox Sign (formerly HelloSign) is a separate product with its own OAuth approval process. Don't confuse it with the Dropbox file API."
+  ],
+  "approval": {
+    "required": true,
+    "process": "Apps start in development status and can link up to 500 users after 'Enable additional users' is turned on. Production status is applied for in the App Console with a description of how the app uses the API and an app icon. Dropbox reviews it against its branding guidelines, terms and permission scope only after the app has linked 50 users, unless early review is requested and granted. After 50 linked users there is a two-week window to get approval before new linking freezes.",
+    "typicalWait": "unknown",
+    "rejectionRisks": [
+      "Not following the Dropbox developer branding guidelines or terms; the docs say the app 'will be rejected if it doesn't'",
+      "Implying Dropbox endorsement or partnership in the app name or branding",
+      "Requesting an unnecessarily broad permission",
+      "Thin description of how the app uses the API (more detail may speed approval)",
+      "Applying too late after hitting 50 users, so the two-week window lapses and linking freezes"
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "External users can't connect: only the developer's account can link a new app",
+      "whatToDo": "Click 'Enable additional users' on the app's info page in the App Console."
+    },
+    {
+      "issue": "User linking frozen two weeks after reaching 50 linked users",
+      "whatToDo": "Submit the production application as soon as you reach 50 linked users (or ask for early review), with complete materials. Unlinking users won't unfreeze the app."
+    },
+    {
+      "issue": "'This app is not valid' or other authorize errors",
+      "whatToDo": "Make sure redirect_uri exactly matches one registered in the App Console. Request only scopes enabled on the Permissions tab, and use only 'online' or 'offline' for token_access_type."
+    },
+    {
+      "issue": "Agent loses access when short-lived tokens expire",
+      "whatToDo": "Request token_access_type=offline, store the refresh token securely, and refresh via /oauth2/token with grant_type=refresh_token."
+    },
+    {
+      "issue": "Production approval timeline unknown",
+      "whatToDo": "Treat it as a launch-gating item. Prepare a detailed API-usage description and icon in advance, and contact Dropbox developer support if it stalls."
+    }
+  ],
+  "agentCanDo": [
+    "Read the Dropbox OAuth guide and developer guide on development and production status",
+    "Choose a minimal scope set and access type (App Folder vs Full Dropbox) for the agent's features",
+    "Write the OAuth authorization code flow with offline access and refresh-token handling (or PKCE for public clients)",
+    "Configure Permissions and redirect URIs in the App Console if the developer is logged in",
+    "Draft the production-status application text describing how the app uses the API",
+    "Track linked-user counts and alert when the 50-user threshold is reached"
+  ],
+  "youMustDo": [
+    "Sign in with your Dropbox account and create the app in the App Console, accepting the developer terms",
+    "Securely retrieve and store the App key and secret",
+    "Click 'Enable additional users' for early external users",
+    "Submit the production status application (with app icon) under your identity and respond to any Dropbox follow-up"
+  ],
+  "evidence": {
+    "verified": [
+      "Dropbox uses OAuth 2.0 authorization code flow; scopes are selected on the App Console 'Permissions' tab and applied to access tokens; least-privilege is recommended (OAuth Guide, docs.dropboxapi.com/dropbox-api/docs/oauth)",
+      "Access types: App Folder limits the app to its own folder; Full Dropbox covers all user content (OAuth Guide)",
+      "Exact redirect URIs must be registered in the App Console (OAuth Guide)",
+      "Access tokens are short-lived; token_access_type=offline returns a refresh token; refresh via /oauth2/token with grant_type=refresh_token; approval remains valid until revoked (OAuth Guide)",
+      "token_access_type accepts 'offline' or 'online' (Dropbox HTTP API reference, surfaced via search of dropbox.com)",
+      "PKCE is supported for clients that can't keep a client_secret secure (OAuth Guide)",
+      "New apps get development status and can only be connected to your own account; 'Enable additional users' on the app's info page allows others (Developer Guide, docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide)",
+      "Development apps can link up to 500 users; after 50 linked users there are two weeks to apply for and receive production approval or linking freezes; unlinking doesn't unfreeze (Developer Guide)",
+      "Production submissions aren't reviewed until the app has linked at least 50 users, except via 'Request early review'; application asks how the app uses the API and an icon; branding guideline violations cause rejection; broad permissions are checked (Developer Guide)",
+      "Redirect URIs need not be publicly accessible; webhook URIs must be public (Community answer by Dropbox staff)",
+      "The 'Before you connect this app...' page doesn't show for production apps; scoped apps can't revert to legacy permissions (Community answer by Dropbox staff)"
+    ],
+    "inferred": [
+      "Whether an app is a user-level or team (Business) app is chosen at creation time",
+      "Production approval wait is likely short once 50 users are reached, but Dropbox doesn't publish a figure"
+    ],
+    "unverifiable": [
+      "How long Dropbox production approval typically takes",
+      "Whether production review includes any security assessment",
+      "Exact short-lived access token lifetime (returned per token by /oauth2/token, not documented as a fixed value)",
+      "Rate limits for the Dropbox API (not stated in the pages checked)"
+    ],
+    "review": [
+      "Confirmed: development status, 'Enable additional users', 500-user development cap and the two-week window after 50 linked users, per https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide.",
+      "Corrected: draft said to apply for production 'before or soon after 50 linked users' and recommended applying 'well before 50 users'; the developer guide says submissions won't be reviewed until the app has linked at least 50 users, unless early review is requested.",
+      "Corrected: draft said production materials were unknown; the developer guide says the application asks how the app uses the API plus an app icon upload, and is reviewed against branding guidelines and terms and for unnecessarily broad permissions.",
+      "Corrected: added that unlinking users does not unfreeze a frozen app, per the developer guide.",
+      "Confirmed: exact redirect URI registration, Permissions-tab scopes, App Folder vs Full Dropbox access types, short-lived tokens and token_access_type=offline refresh tokens, per https://docs.dropboxapi.com/dropbox-api/docs/oauth (developers.dropbox.com/oauth-guide now redirects here).",
+      "Corrected: moved App Folder/Full Dropbox and refresh-token behavior from inferred to verified; token_access_type values 'online'/'offline' confirmed via Dropbox API reference search results on dropbox.com.",
+      "Corrected: removed the Dropbox Sign OAuth approval steps from youMustDo and sources, since they concern a separate product, not the Dropbox file API.",
+      "Could not verify: production review turnaround time and Dropbox API rate limits; neither appears in the developer guide or OAuth guide. The direct HTTP API reference page did not render for fetching."
+    ]
+  },
+  "sources": [
+    {
+      "title": "Developer Guide - Dropbox",
+      "url": "https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/developer-guide"
+    },
+    {
+      "title": "Dropbox OAuth Guide - Dropbox",
+      "url": "https://docs.dropboxapi.com/dropbox-api/docs/oauth"
+    },
+    {
+      "title": "Dropbox App Console",
+      "url": "https://www.dropbox.com/developers/apps"
+    },
+    {
+      "title": "How does Redirect URI in App Console work - Dropbox Community",
+      "url": "https://community.dropbox.com/en/discussion/213176/how-does-redirect-uri-in-app-console-work"
+    },
+    {
+      "title": "No Response to Authorize Command - Dropbox Community",
+      "url": "https://community.dropbox.com/en/discussion/822220/no-response-to-authorize-command"
+    },
+    {
+      "title": "Oauth Dialogue Flow - Dropbox Community",
+      "url": "https://community.dropbox.com/en/discussion/515869/oauth-dialogue-flow"
+    },
+    {
+      "title": "Oauth This app is not valid - Dropbox Community",
+      "url": "https://community.dropbox.com/en/discussion/848977/oauth-this-app-is-not-valid"
+    },
+    {
+      "title": "Do I need to request production status? - Dropbox Community",
+      "url": "https://community.dropbox.com/en/discussion/857591/do-i-need-to-request-production-status"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

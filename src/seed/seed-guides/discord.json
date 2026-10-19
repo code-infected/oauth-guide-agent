@@ -1,0 +1,175 @@
+{
+  "slug": "discord",
+  "app": {
+    "name": "Discord",
+    "website": "https://discord.com",
+    "docsUrl": "https://docs.discord.com/developers/topics/oauth2"
+  },
+  "difficulty": "trivial",
+  "effort": {
+    "activeTime": "~20-30 minutes for app creation and OAuth2 setup; a few hours to implement and test the flow",
+    "waitTime": "none for user OAuth2 scopes such as identify, email and guilds. Bot verification or Privileged Intent review only applies if you also run a bot."
+  },
+  "steps": [
+    {
+      "title": "Create an application in the Developer Portal",
+      "detail": "Sign in at https://discord.com/developers/applications, click 'New Application', choose a name, and create it. Consider creating a Developer Team first and creating the app under it, so ownership isn't tied to one person.",
+      "automatable": false
+    },
+    {
+      "title": "Copy the client ID and client secret",
+      "detail": "On the app's OAuth2 page, copy the client_id and reset or reveal the client_secret. Store the secret in a secrets manager. You authenticate token requests with HTTP Basic auth, or with client_id and client_secret in the form body.",
+      "automatable": false
+    },
+    {
+      "title": "Register redirect URIs",
+      "detail": "On the OAuth2 page, add every redirect_uri your backend will use, for example https://yourapp.com/oauth/discord/callback. The redirect_uri in the authorize request must match a registered one, and the token request must use the same redirect_uri as the authorize request.",
+      "automatable": true
+    },
+    {
+      "title": "Choose scopes",
+      "detail": "Pick the minimum scopes your agent needs. Common user scopes are identify (basic profile), email, guilds (list the user's servers), guilds.members.read and connections. guilds.join requires your bot to be in the target guild. Avoid partner-only scopes (rpc*, dm_channels.read, identify.premium, voice, applications.builds.upload) and relationships.read, which requires Social SDK access.",
+      "automatable": true
+    },
+    {
+      "title": "Fill in app metadata",
+      "detail": "Set the description, icon, Terms of Service URL and Privacy Policy URL in the app settings so the consent screen looks trustworthy to your users.",
+      "automatable": true
+    },
+    {
+      "title": "Implement the authorization code flow",
+      "detail": "Send users to https://discord.com/oauth2/authorize with response_type=code, client_id, scope (space-separated and URL-encoded as %20), the URL-encoded redirect_uri, a random state value and optionally prompt. On callback, validate state (and iss if you support multiple providers). Then POST grant_type=authorization_code, code and redirect_uri as application/x-www-form-urlencoded to https://discord.com/api/oauth2/token. Store the access token (expires_in is 604800 seconds, or 7 days, in the docs example) and refresh token, and refresh with grant_type=refresh_token. Send a User-Agent header of the form DiscordBot ($url, $versionNumber) and respect rate limits.",
+      "automatable": true
+    },
+    {
+      "title": "Test with an external account",
+      "detail": "Authorize the app with a second Discord account that is not on your team. This confirms external users can connect.",
+      "automatable": false
+    },
+    {
+      "title": "Only if you also run a bot: plan for verification and Privileged Intents",
+      "detail": "Apps in 100+ servers (guilds) require verification, which is started from the App Verification tab in the Developer Portal. The team owner verifies their identity through Stripe. Privileged Intents (Guild Members, Presence, Message Content) can be toggled in the portal until the app has more than 10,000 unique users; above that, you must submit a review request to keep access. None of this applies to a login/identify-only OAuth2 app.",
+      "automatable": false
+    }
+  ],
+  "gotchas": [
+    "The redirect_uri must match a registered URI, be URL-encoded in the authorize URL, and be the same value in the token request.",
+    "Always send and validate the state parameter. Discord also returns iss=https://discord.com, which you should verify if you support multiple OAuth providers.",
+    "prompt=consent re-asks for approval even if the user already authorized. prompt=none skips the approval screen for returning users.",
+    "Access tokens expire (the docs example shows expires_in 604800, or 7 days), so implement refresh-token handling.",
+    "Revoking one token at /api/oauth2/token/revoke revokes all access and refresh tokens tied to that authorization.",
+    "The token and revoke endpoints accept only application/x-www-form-urlencoded bodies, not JSON.",
+    "Requests without a valid User-Agent may be blocked by Cloudflare. A missing or invalid Content-Type returns error 50035 (Invalid Form Body).",
+    "API users who regularly hit and ignore rate limits have their API keys revoked and are blocked from the platform.",
+    "Partner-only scopes (rpc, rpc.*, dm_channels.read, identify.premium, voice, applications.builds.upload) and relationships.read (Social SDK) need Discord approval. Requesting them without approval may cause errors or undocumented behaviour.",
+    "Bot tokens and client secrets are different credentials. Never commit either to version control."
+  ],
+  "approval": {
+    "required": false,
+    "process": "None for user OAuth2 with standard scopes (identify, email, guilds, connections). Any Discord user can authorize the app immediately. Separate gates apply only to bots in 100+ servers (app verification with Stripe ID check), bots with more than 10,000 users wanting Privileged Intents (review request), and partner-only or Social SDK scopes.",
+    "typicalWait": "none",
+    "rejectionRisks": [
+      "Bot verification only: the team owner can't complete the Stripe identity check.",
+      "Privileged Intents only: requesting intents without a clear, policy-compliant need.",
+      "Requesting partner-only or Social SDK scopes without approval.",
+      "Violating the Developer Terms of Service or Developer Policy."
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "The token exchange fails with invalid_grant or a redirect mismatch.",
+      "whatToDo": "Ensure the redirect_uri is identical in the portal, the authorize request and the token request. Use each code once and promptly, and send a form-urlencoded body."
+    },
+    {
+      "issue": "The agent needs data only available through partner-only or restricted scopes (e.g., DMs, relationships).",
+      "whatToDo": "Redesign around the public scopes. Partner access goes through a Discord account representative, and relationships.read goes through the Social SDK getting-started process."
+    },
+    {
+      "issue": "If you add a bot later, it reaches 100 servers and needs verification.",
+      "whatToDo": "Make sure the app is owned by a Developer Team whose owner can complete Stripe identity verification, then start from the App Verification tab."
+    }
+  ],
+  "agentCanDo": [
+    "Read Discord's OAuth2, API Reference and Gateway (privileged intents) docs.",
+    "Select a minimal scope set for the agent's use case.",
+    "Write the authorization-code flow, including state validation, token exchange, refresh and revocation.",
+    "Draft privacy policy and terms of service text and the app description.",
+    "Fill in Developer Portal forms while the developer is logged in."
+  ],
+  "youMustDo": [
+    "Log into Discord, create the application (ideally under a Developer Team), and accept the Developer Terms of Service.",
+    "Retrieve and securely store the client secret.",
+    "Host the privacy policy and terms of service at URLs you control.",
+    "Test authorization with an external Discord account.",
+    "Only if you run a bot that reaches 100 servers: have the team owner complete Stripe identity verification and the app verification application."
+  ],
+  "evidence": {
+    "verified": [
+      "OAuth2 page: register an application in the Developer Portal and record the client_id and client_secret. Token calls use HTTP Basic auth or credentials in the form body.",
+      "OAuth2 page: authorize URL https://discord.com/oauth2/authorize; token URL https://discord.com/api/oauth2/token; revoke URL https://discord.com/api/oauth2/token/revoke. Token and revoke accept only application/x-www-form-urlencoded.",
+      "OAuth2 page: the redirect_uri must match a registered one and must be the same in the token exchange as in the authorize request.",
+      "OAuth2 page: example token response has expires_in 604800, and refresh uses grant_type=refresh_token.",
+      "OAuth2 page: prompt=consent re-requests approval; prompt=none skips it. state is recommended for CSRF protection, and iss=https://discord.com is returned.",
+      "OAuth2 page: partner-only scopes are applications.builds.upload, dm_channels.read, identify.premium, rpc*, and voice. relationships.read requires Social SDK access, and activities.read/write are not currently available. Identify, email, guilds, guilds.members.read and connections carry no approval note.",
+      "OAuth2 page: describes no general app review; approval applies only to the noted scopes.",
+      "OAuth2 and Permissions page: scopes must be declared in the Developer Portal, and user access tokens are short-lived and must be refreshed.",
+      "API Reference: User-Agent format is DiscordBot ($url, $versionNumber), and an invalid one may be blocked by Cloudflare. A missing Content-Type gives 50035. Users who regularly ignore rate limits have their API keys revoked and are blocked.",
+      "Gateway page: verification is required for apps in 100+ guilds. Above 10,000 unique users, apps must submit a review request for privileged intents; below that they toggle them in the portal."
+    ],
+    "inferred": [
+      "A pure user-OAuth2 app (no bot) never reaches the verification gate, because verification is tied to guild count and privileged intents are bot/gateway features.",
+      "Using a Developer Team is advisable for business ownership."
+    ],
+    "unverifiable": [
+      "Typical wait time for bot verification or Privileged Intent review.",
+      "Current details of the Stripe identity check and age requirement. The support-dev.discord.com articles returned HTTP 403.",
+      "The 90-day application window and annual reapplication for privileged intents. These are from the draft, and the source article returned 403.",
+      "Numeric per-route rate limits for OAuth2 endpoints."
+    ],
+    "review": [
+      "Corrected: lowered difficulty from moderate to trivial. https://docs.discord.com/developers/topics/oauth2 describes no general app review, and standard user scopes have no approval requirement, so external users can authorize immediately.",
+      "Confirmed: authorize/token/revoke endpoints, form-urlencoded only, redirect_uri matching, state, iss and prompt behaviour — https://docs.discord.com/developers/topics/oauth2",
+      "Corrected: the restricted-scope list. messages.read is not in the partner-only list. The partner-only scopes are rpc*, dm_channels.read, identify.premium, voice and applications.builds.upload; relationships.read requires the Social SDK — https://docs.discord.com/developers/topics/oauth2",
+      "Corrected: added the token lifetime (expires_in 604800 in the example) and the fact that revoking one token revokes the whole authorization. Token auth may use Basic auth or body credentials — https://docs.discord.com/developers/topics/oauth2",
+      "Confirmed: verification is required for apps in 100+ guilds, and the Privileged Intent review applies above 10,000 unique users. Both are scoped to bots only — https://docs.discord.com/developers/events/gateway",
+      "Confirmed: User-Agent/Cloudflare, 50035 Content-Type error and rate-limit abuse wording — https://docs.discord.com/developers/reference",
+      "Could not verify: Stripe ID / age-16 requirement and the 90-day / annual privileged intent rules. support-dev.discord.com articles 6276106082583, 23926564536471 and 40281523410967 returned HTTP 403, so the age and 90-day details were removed from the steps."
+    ]
+  },
+  "sources": [
+    {
+      "title": "OAuth2 - Documentation - Discord",
+      "url": "https://docs.discord.com/developers/topics/oauth2"
+    },
+    {
+      "title": "OAuth2 and Permissions - Documentation - Discord",
+      "url": "https://docs.discord.com/developers/platform/oauth2-and-permissions"
+    },
+    {
+      "title": "API Reference - Documentation - Discord",
+      "url": "https://docs.discord.com/developers/reference"
+    },
+    {
+      "title": "Gateway - Documentation - Discord",
+      "url": "https://docs.discord.com/developers/events/gateway"
+    },
+    {
+      "title": "Application Resource - Documentation - Discord",
+      "url": "https://docs.discord.com/developers/resources/application"
+    },
+    {
+      "title": "How Do I Get My App Verified? – Developers",
+      "url": "https://support-dev.discord.com/hc/en-us/articles/23926564536471-How-Do-I-Get-My-App-Verified"
+    },
+    {
+      "title": "Changes to Privileged Intent Access for Discord Apps – Developers",
+      "url": "https://support-dev.discord.com/hc/en-us/articles/40281523410967-Changes-to-Privileged-Intent-Access-for-Discord-Apps"
+    },
+    {
+      "title": "Terms of Service | Discord",
+      "url": "https://discord.com/terms"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

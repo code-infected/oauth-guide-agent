@@ -1,0 +1,215 @@
+{
+  "slug": "atlassian",
+  "app": {
+    "name": "Atlassian (Jira / Confluence)",
+    "website": "https://atlassian.com",
+    "docsUrl": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/"
+  },
+  "difficulty": "moderate",
+  "effort": {
+    "activeTime": "~30-60 minutes",
+    "waitTime": "none to start sharing (sharing is a self-serve toggle); optional Atlassian review via the Marketplace process usually takes 5-10 business days to start"
+  },
+  "steps": [
+    {
+      "title": "Open the Atlassian developer console",
+      "detail": "On developer.atlassian.com, select your profile icon (top right) and choose Developer console (developer.atlassian.com/console/myapps). Sign in with a company-controlled Atlassian account, not a personal one, because it will own the integration.",
+      "automatable": false
+    },
+    {
+      "title": "Create an OAuth 2.0 integration app",
+      "detail": "Open the Create dropdown, choose OAuth 2.0 integration, enter an app name and pick a grant type. Account-level grants cover every site the user has installed the app on. Resource-level grants only cover the sites the user picks on the consent screen. Do not use Jira/Confluence 'Application links'. Those link Atlassian products to each other and are not for third-party apps.",
+      "automatable": false
+    },
+    {
+      "title": "Add APIs and scopes",
+      "detail": "Open Permissions, select Add next to the Jira and/or Confluence API, then use Configure to add scopes. Atlassian recommends classic scopes and says to use granular scopes only when classic ones can't do the job. It also recommends fewer than 50 scopes in total. Example classic Confluence scopes are read:confluence-content.all and search:confluence. Each endpoint's 'OAuth scopes required' field tells you what to add. If you add scopes later, users who already consented must consent again.",
+      "automatable": true
+    },
+    {
+      "title": "Configure the callback URL",
+      "detail": "Open Authorization, select Configure next to OAuth 2.0 (3LO), enter the Callback URL and save. The redirect_uri in your authorization requests must match it exactly. The documented console has a single callback URL field. Plan on one app per environment (dev, staging, prod).",
+      "automatable": true
+    },
+    {
+      "title": "Copy the client ID and secret",
+      "detail": "Open Settings, copy the Client ID and Secret, and store the secret securely.",
+      "automatable": false
+    },
+    {
+      "title": "Implement the authorization code flow",
+      "detail": "Send users to https://auth.atlassian.com/authorize with audience=api.atlassian.com, client_id, scope (space-separated), redirect_uri, state, response_type=code and prompt=consent. Exchange the code with a POST to https://auth.atlassian.com/oauth/token. Call GET https://api.atlassian.com/oauth/token/accessible-resources to get each site's id (cloudid). Then call APIs at https://api.atlassian.com/ex/jira/{cloudid}/... or https://api.atlassian.com/ex/confluence/{cloudid}/..., not the site's atlassian.net URL. Add offline_access to the scope to get refresh tokens.",
+      "automatable": true
+    },
+    {
+      "title": "Enable sharing so external users can authorize",
+      "detail": "New 3LO apps are private, so only you can install and use them. Open Distribution and turn on the Enable sharing toggle. In practice the console also asks for a vendor name, a privacy policy URL and a personal data declaration (whether you store user personal data). The official docs pages do not list these fields. Copy the Authorization URL from Authorization and give it to your users. Each user installs and consents individually.",
+      "automatable": false
+    },
+    {
+      "title": "(If you store personal data) Implement personal data reporting",
+      "detail": "Apps that store Atlassian user personal data must report those accounts via POST https://api.atlassian.com/app/report-accounts/ (up to 90 accounts per request). The default cycle is every 7 days. Follow any Cycle-Period header. Erase or refresh the data when the API says to.",
+      "automatable": true
+    },
+    {
+      "title": "(Optional) Get Atlassian review / Marketplace listing",
+      "detail": "Until Atlassian approves the app, the consent screen warns users it 'has not yet been reviewed by Atlassian'. Users can still authorize it. To get approval, follow the Marketplace third-party integration listing steps: a Marketplace Partner profile, accepting the Marketplace Partner Agreement, and submitting for review. OAuth 2.0 apps can only be informational listings with limited Marketplace features. A full informative listing is not required to submit for approval.",
+      "automatable": false
+    }
+  ],
+  "gotchas": [
+    "Sharing is off by default. Until you turn on Distribution > Enable sharing, only the app owner can authorize the app.",
+    "Unreviewed shared apps work, but the consent screen warns users the app 'has not yet been reviewed by Atlassian'. This can hurt conversion with enterprise users.",
+    "The authorization URL must include audience=api.atlassian.com and prompt=consent.",
+    "3LO tokens must go through api.atlassian.com/ex/{jira|confluence}/{cloudid}/... Calling COMPANY.atlassian.net directly with a 3LO token is not the supported pattern. Developers report getting only public content or 404s that way.",
+    "accessible-resources ids are not unique across containers (Jira vs Confluence). Use the scopes on each entry to tell them apart, and call it again when access may have changed.",
+    "Refresh tokens rotate. Each refresh returns a new refresh token and disables the old one, with a 10-minute reuse leeway. They expire after 90 days of inactivity.",
+    "Scopes never exceed the authorizing user's product permissions.",
+    "Prefer classic scopes, keep under 50, and remember some scopes imply others. Some scopes may expose beta or non-public APIs.",
+    "Adding scopes later forces existing users to consent again.",
+    "OAuth 2.0 (3LO) supports only the authorization code grant. An admin can't revoke a user's access to an app through the Connected Apps user screen.",
+    "Jira Cloud enforces points-based rate limits for 3LO apps from March 2, 2026. The default Tier 1 is a 65,000-point hourly quota shared across all tenants. There are also per-second burst limits (100 req/s GET/POST, 50 req/s PUT/DELETE per endpoint) and per-issue write limits. When the hourly quota runs out, every request is denied until the top of the next UTC hour. Handle 429 with Retry-After and the RateLimit-Reason header."
+  ],
+  "approval": {
+    "required": false,
+    "process": "No review is required before external users can authorize. Sharing is a self-serve toggle under Distribution. Until Atlassian approves the app, users see a 'not yet reviewed by Atlassian' warning. Approval is optional and follows the Marketplace third-party integration listing process (Partner profile, Marketplace Partner Agreement, review). OAuth apps get informational listings only.",
+    "typicalWait": "none (optional review usually takes 5-10 business days to start)",
+    "rejectionRisks": [
+      "(Optional review) incomplete listing fields or missing policy links",
+      "(Optional review) no test access to your product for the Marketplace reviewer",
+      "Privacy policy not hosted on your own domain (reported by Atlassian staff on the developer community; not in official docs)"
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "Other users cannot authorize the app; only the owner can.",
+      "whatToDo": "Open Distribution, turn on Enable sharing, fill in the required vendor and privacy fields, then send users the Authorization URL."
+    },
+    {
+      "issue": "Enterprise users hesitate because of the 'not yet reviewed by Atlassian' warning.",
+      "whatToDo": "Submit the integration for Atlassian approval via the Marketplace third-party integration process. Allow 5-10 business days for the review to start."
+    },
+    {
+      "issue": "API returns only public content or 404 despite a valid token.",
+      "whatToDo": "Get the cloudid from accessible-resources and call https://api.atlassian.com/ex/{jira|confluence}/{cloudid}/... instead of the atlassian.net URL. Confirm your scopes cover the endpoint ('OAuth scopes required')."
+    },
+    {
+      "issue": "Authorizing user lacks product permissions.",
+      "whatToDo": "Scopes cannot exceed the user's permissions. Have a user with the right access authorize the app."
+    },
+    {
+      "issue": "Agent loses access after the access token expires, or refresh fails.",
+      "whatToDo": "Request offline_access. Store the new rotating refresh token after every refresh, and handle concurrent refreshes within the 10-minute leeway."
+    },
+    {
+      "issue": "Need different callback URLs for dev/staging/prod.",
+      "whatToDo": "Create a separate 3LO app (separate client ID/secret) per environment."
+    },
+    {
+      "issue": "Jira returns 429 for every request until the hour resets.",
+      "whatToDo": "The shared 65,000-point Tier 1 quota is used up. Back off until the UTC hour resets and cut request volume. Tier 2 per-tenant quotas require Atlassian review."
+    }
+  ],
+  "agentCanDo": [
+    "Choose a minimal set of classic Jira/Confluence scopes for the agent's use case",
+    "Write the 3LO authorization URL, token exchange, refresh-token rotation, accessible-resources and api.atlassian.com/ex gateway code",
+    "Implement the personal data reporting API cycle if the product stores user data",
+    "Implement 429 handling using Retry-After and RateLimit-Reason",
+    "Draft the privacy policy and personal data declaration text",
+    "Fill console forms in a session where the developer is logged in"
+  ],
+  "youMustDo": [
+    "Own and sign in to the Atlassian account that creates the app",
+    "Create the app and safeguard the client secret",
+    "Turn on sharing and host a privacy policy URL; answer the personal data declaration truthfully",
+    "Accept any Atlassian developer terms",
+    "If seeking Atlassian approval: create a Marketplace Partner profile, accept the Marketplace Partner Agreement, and give reviewers test access"
+  ],
+  "evidence": {
+    "verified": [
+      "Developer console is reached via profile icon > Developer console; apps are created via Create > OAuth 2.0 integration with a choice of account-level or resource-level grant (oauth-2-3lo-apps).",
+      "Callback URL is set under Authorization > Configure next to OAuth 2.0 (3LO); redirect_uri must match it (oauth-2-3lo-apps).",
+      "Authorization URL is auth.atlassian.com/authorize with required audience=api.atlassian.com and prompt=consent (oauth-2-3lo-apps).",
+      "offline_access yields refresh tokens; refresh tokens rotate, have a 90-day inactivity expiry and a 10-minute reuse leeway (oauth-2-3lo-apps).",
+      "API calls go through api.atlassian.com/ex/jira/{cloudid} and /ex/confluence/{cloudid}; cloudid comes from accessible-resources (oauth-2-3lo-apps).",
+      "3LO apps are private by default; sharing is enabled via Distribution > Enable sharing; users install per user via the Authorization URL (managing-oauth-apps).",
+      "Unapproved shared apps show a 'not yet been reviewed by Atlassian' warning; approval follows the Marketplace third-party integration steps and doesn't need an informative listing (managing-oauth-apps).",
+      "OAuth 2.0 apps can only be informational Marketplace listings with limited features (managing-oauth-apps).",
+      "Users must re-consent when scopes are added (managing-oauth-apps).",
+      "Classic scopes are recommended; granular only when classic can't be used; fewer than 50 scopes recommended; some scopes imply others; scopes may expose beta/non-public APIs (Confluence scopes page).",
+      "Apps storing personal data must use the Personal data reporting API; default cycle 7 days; up to 90 accounts per request (user privacy developer guide).",
+      "Marketplace reviews usually take 5-10 business days to start and require a Partner profile and accepting the Marketplace Partner Agreement (creating-a-marketplace-listing).",
+      "Jira points-based rate limits apply to 3LO apps from March 2, 2026: Tier 1 65,000 points/hour global pool, burst and per-issue write limits, 429 with RateLimit-Reason (Jira rate-limiting page)."
+    ],
+    "inferred": [
+      "Only one callback URL per app; use separate apps per environment (official docs show a single field; community threads confirm, but not stated outright).",
+      "The Distribution form requires a vendor name, privacy policy URL and personal data declaration (community and third-party guides; not in the official docs pages read).",
+      "Calling the atlassian.net site URL with a 3LO token returns only public content/404s (community report; official docs only show the api.atlassian.com pattern)."
+    ],
+    "unverifiable": [
+      "Exact field list and wording of the Distribution/sharing form in the current console.",
+      "Whether Atlassian approval removes the consent-screen warning and how long OAuth-integration approval takes end to end.",
+      "Whether organization admins can block unapproved user-installed 3LO apps for their users.",
+      "Confluence Cloud rate-limit figures for 3LO apps (not checked)."
+    ],
+    "review": [
+      "Confirmed: console path, Create > OAuth 2.0 integration, Authorization > Configure callback URL, exact redirect_uri match, auth URL params (audience, prompt=consent), offline_access and rotating refresh tokens, and api.atlassian.com/ex/{product}/{cloudid} pattern at https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/",
+      "Corrected: added the account-level vs resource-level grant type choice made at app creation (https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/).",
+      "Confirmed: apps are private by default and sharing is a self-serve Distribution > Enable sharing toggle; no review is mandatory, but unapproved apps show a 'not yet been reviewed by Atlassian' warning (https://developer.atlassian.com/cloud/oauth/getting-started/managing-oauth-apps/). Draft omitted the warning and optional approval path; added.",
+      "Could not verify: the vendor name / privacy policy / personal data declaration fields on the Distribution form. Neither https://developer.atlassian.com/cloud/oauth/getting-started/managing-oauth-apps/ nor the 3LO page mentions them; only community threads do. Moved to inferred.",
+      "Corrected: added the mandatory Personal data reporting API obligation (7-day default cycle) for apps storing personal data, per https://developer.atlassian.com/cloud/jira/platform/user-privacy-developer-guide/",
+      "Confirmed: classic scopes recommended, granular only when needed, under 50 scopes, implied scopes, beta API caveat, and scope names read:confluence-content.all / search:confluence at https://developer.atlassian.com/cloud/confluence/scopes-for-oauth-2-3LO-and-forge-apps/",
+      "Corrected: replaced the irrelevant Bitbucket rate limit with Jira's points-based limits (65,000 points/hour Tier 1, burst limits, per-issue write limits, effective March 2, 2026) from https://developer.atlassian.com/cloud/jira/platform/rate-limiting/",
+      "Confirmed: Marketplace review usually takes 5-10 business days to start and needs a Partner profile and the Marketplace Partner Agreement (https://developer.atlassian.com/platform/marketplace/creating-a-marketplace-listing/). Could not verify the OAuth-specific approval timeline; https://developer.atlassian.com/platform/marketplace/knowledge-base/listing-a-third-party-integration-on-the-atlassian-marketplace/ doesn't cover it.",
+      "Could not verify: whether multiple callback URLs are allowed. The official 3LO page shows a single field, and only community threads say one per app."
+    ]
+  },
+  "sources": [
+    {
+      "title": "OAuth 2.0 (3LO) apps | Jira Cloud platform",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/"
+    },
+    {
+      "title": "Managing OAuth 2.0 apps | Atlassian Developer",
+      "url": "https://developer.atlassian.com/cloud/oauth/getting-started/managing-oauth-apps/"
+    },
+    {
+      "title": "Implementing OAuth 2.0 (3LO) | Atlassian Developer",
+      "url": "https://developer.atlassian.com/cloud/oauth/getting-started/implementing-oauth-3lo/"
+    },
+    {
+      "title": "Confluence scopes for OAuth 2.0 (3LO) and Forge apps",
+      "url": "https://developer.atlassian.com/cloud/confluence/scopes-for-oauth-2-3LO-and-forge-apps"
+    },
+    {
+      "title": "User privacy guide for app developers | Jira Cloud platform",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/user-privacy-developer-guide/"
+    },
+    {
+      "title": "Rate limiting | Jira Cloud platform",
+      "url": "https://developer.atlassian.com/cloud/jira/platform/rate-limiting/"
+    },
+    {
+      "title": "Link Jira to Atlassian apps using OAuth 2.0 | Atlassian Support",
+      "url": "https://support.atlassian.com/jira-cloud-administration/docs/app-link-oauth-2-0-agc"
+    },
+    {
+      "title": "Create your app listing on the Atlassian Marketplace",
+      "url": "https://developer.atlassian.com/platform/marketplace/creating-a-marketplace-listing"
+    },
+    {
+      "title": "List a third party integration on the Atlassian Marketplace",
+      "url": "https://developer.atlassian.com/platform/marketplace/knowledge-base/listing-a-third-party-integration-on-the-atlassian-marketplace/"
+    },
+    {
+      "title": "Submit for review and respond to questions",
+      "url": "https://developer.atlassian.com/platform/marketplace/onboarding-hub/launch/submit-for-review"
+    },
+    {
+      "title": "Trying to perform User Impersonation with OAuth2, but I can only access public pages - The Atlassian Developer Community",
+      "url": "https://community.developer.atlassian.com/t/trying-to-perform-user-impersonation-with-oauth2-but-i-can-only-access-public-pages/100636"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

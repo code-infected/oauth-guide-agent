@@ -1,0 +1,210 @@
+{
+  "slug": "github",
+  "app": {
+    "name": "GitHub",
+    "website": "https://github.com",
+    "docsUrl": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps"
+  },
+  "difficulty": "moderate",
+  "effort": {
+    "activeTime": "~15-30 minutes to register; a few hours to implement and test the flow",
+    "waitTime": "none for the OAuth app itself (optional Marketplace publisher verification has an unstated review time)"
+  },
+  "steps": [
+    {
+      "title": "Choose OAuth App vs GitHub App",
+      "detail": "GitHub generally recommends GitHub Apps over OAuth apps: GitHub Apps use fine-grained permissions, while OAuth apps use coarse scopes (e.g. issue or pull request access needs the broad 'repo' scope). The main exception is when you need enterprise-level resources, which GitHub Apps can't yet get. This guide covers the OAuth app path.",
+      "automatable": true
+    },
+    {
+      "title": "Decide the owning account",
+      "detail": "A user or organization can own up to 100 OAuth apps. Register under an organization if you may later sell paid plans on GitHub Marketplace; only org-owned apps can be verified publishers, and personal-owned apps must be transferred first.",
+      "automatable": false
+    },
+    {
+      "title": "Register the OAuth app",
+      "detail": "Profile picture > Settings > Developer settings > OAuth apps > New OAuth App ('Register a new application' if it's your first). For an org: the organization's Settings > Developer settings > OAuth apps. Fill in Application name, Homepage URL, optional description, and Authorization callback URL (use 'Add callback URL' for more, up to 10). Leave 'Expire user access tokens' enabled (default) if your app can handle refresh tokens; tick 'Enable Device Flow' only if needed. Click Register application.",
+      "automatable": false
+    },
+    {
+      "title": "Copy the Client ID and generate a client secret",
+      "detail": "After creation, copy the Client ID and generate a client secret. Store the secret securely; it is required in the token exchange.",
+      "automatable": false
+    },
+    {
+      "title": "Choose minimal scopes",
+      "detail": "Pick the narrowest scopes from 'Scopes for OAuth apps' (e.g. no scope for public info, public_repo instead of repo, user:email for private emails). Requested scopes are shown on the authorization form. Source code access cannot be scoped to read-only.",
+      "automatable": true
+    },
+    {
+      "title": "Implement the web application flow with PKCE",
+      "detail": "Redirect users to https://github.com/login/oauth/authorize with client_id (required), and the strongly recommended redirect_uri, state, code_challenge and code_challenge_method=S256 (plain is not accepted), plus scope. Exchange the code at POST https://github.com/login/oauth/access_token with client_id, client_secret, code, the same redirect_uri, and code_verifier (required if a code_challenge was sent).",
+      "automatable": true
+    },
+    {
+      "title": "Handle token expiry and refresh",
+      "detail": "With expiring tokens, access tokens last 8 hours (expires_in=28800) and refresh tokens expire after 6 months of non-use. Refresh with grant_type=refresh_token; each refresh returns a new pair and invalidates the old one, and cannot change scopes. Requesting the offline_access scope yields expiring tokens plus a refresh token even if the app isn't configured for them.",
+      "automatable": true
+    },
+    {
+      "title": "Verify granted scopes",
+      "detail": "Check the X-OAuth-Scopes response header for the scopes the token actually has, and X-Accepted-OAuth-Scopes for what an endpoint requires. Users may grant fewer scopes than requested.",
+      "automatable": true
+    },
+    {
+      "title": "Test with an external account, including an org member",
+      "detail": "Authorize with a second GitHub account outside your org and confirm access to its org-owned resources. OAuth app access restrictions are on by default for new organizations, so an org owner must approve your app before it can reach private org resources.",
+      "automatable": false
+    },
+    {
+      "title": "(Optional) Publisher verification and Marketplace listing",
+      "detail": "Only needed to offer paid plans or show a Marketplace badge: organization Settings > Developer settings > Publisher Verification, complete the checklist (accurate profile and support email, org 2FA, verified domain), then click Request Verification. Not required for users to authorize your app.",
+      "automatable": false
+    }
+  ],
+  "gotchas": [
+    "OAuth scopes are coarse: 'repo' grants full read/write to all public and private repos plus some org resources.",
+    "Source code access cannot be scoped to read-only with OAuth app scopes.",
+    "Redirect URL matching: with wildcard matching disabled the redirect_uri must exactly match a registered callback URL; with it enabled, host (ignoring subdomains) and port must match and the path must be a subdirectory. Apps with a single callback URL created before August 3, 2026 have wildcard matching on by default; GitHub recommends disabling it if not needed. Loopback redirect URLs may use a different port.",
+    "If redirect_uri is omitted, GitHub sends users to the first configured callback URL.",
+    "Users can grant fewer scopes than requested; check X-OAuth-Scopes rather than assuming.",
+    "OAuth app access restrictions are enabled by default for new organizations: unapproved apps see only public org resources until an owner approves.",
+    "Orgs using SAML SSO require the user to have an active SAML session when authorizing.",
+    "Users must have a verified email address before authorizing an OAuth app.",
+    "GitHub issues at most 10 tokens per user/application/scope combination and allows 10 token creations per hour; exceeding the 10-token cap silently revokes an older token, so don't re-run the flow per session.",
+    "REST API rate limit for OAuth user tokens is 5,000 requests/hour per user, shared with that user's other apps and PATs (15,000/hour when the app is owned or approved by a GitHub Enterprise Cloud org the user belongs to).",
+    "Implicit grant and CORS preflight requests are not supported, so the token exchange must happen server-side."
+  ],
+  "approval": {
+    "required": false,
+    "process": "No GitHub review is needed for external users to authorize an OAuth app. Per-organization owner approval may be needed for access to private org resources (restrictions are on by default for new orgs). Optional publisher verification (org profile/support email, org 2FA, verified domain, then 'Request Verification') is only required to offer paid Marketplace plans or display a Marketplace badge.",
+    "typicalWait": "none (publisher verification, if pursued: unknown)",
+    "rejectionRisks": [
+      "For publisher verification: missing or inaccurate org profile/support email",
+      "For publisher verification: org 2FA not enabled",
+      "For publisher verification: no verified domain badge on the org profile",
+      "App owned by a personal account when trying to become a verified publisher"
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "End users' organizations block your app via OAuth app access restrictions (default for new orgs), so private org repos are invisible to the agent.",
+      "whatToDo": "Tell users to request org owner approval during authorization, or switch to a GitHub App that orgs install explicitly."
+    },
+    {
+      "issue": "redirect_uri mismatch errors during authorization or token exchange.",
+      "whatToDo": "Register every exact callback URL (up to 10), send the same redirect_uri in the token request, and don't rely on wildcard subdirectory matching unless it's enabled for the app."
+    },
+    {
+      "issue": "Tokens stop working after 8 hours.",
+      "whatToDo": "Store and use the refresh token (valid 6 months of non-use), or clear 'Expire user access tokens' if your app can't yet handle refresh."
+    },
+    {
+      "issue": "Older tokens get revoked unexpectedly.",
+      "whatToDo": "Reuse stored tokens instead of re-authorizing; GitHub keeps at most 10 tokens per user/app/scope and revokes extras."
+    },
+    {
+      "issue": "Scopes too broad (e.g. repo) deter users or security reviewers.",
+      "whatToDo": "Request minimal scopes or move to a GitHub App with fine-grained permissions."
+    },
+    {
+      "issue": "Wanting to sell on Marketplace but the app is owned by a personal account.",
+      "whatToDo": "Transfer app ownership to an organization where you are an owner, then complete publisher verification."
+    }
+  ],
+  "agentCanDo": [
+    "Read GitHub's docs on authorizing OAuth apps, scopes, rate limits and publisher verification (sources listed)",
+    "Recommend OAuth App vs GitHub App for the use case",
+    "Select a minimal scope set",
+    "Write the authorization-code flow with PKCE (S256), state and redirect_uri handling, and the token exchange",
+    "Implement refresh-token handling for 8-hour expiring tokens",
+    "Add scope verification using X-OAuth-Scopes headers",
+    "Draft user-facing messaging for org access approval",
+    "Fill in the New OAuth App form if the developer is logged in"
+  ],
+  "youMustDo": [
+    "Sign in to GitHub and decide which personal or organization account owns the app",
+    "Create the app and generate/store the client secret",
+    "Own and host the callback domain",
+    "Test with a real external account, including one in an org with OAuth app restrictions",
+    "If pursuing Marketplace paid plans: enable org 2FA, verify a domain, and submit publisher verification"
+  ],
+  "evidence": {
+    "verified": [
+      "Authorize request: client_id required; redirect_uri, state, code_challenge, code_challenge_method strongly recommended; PKCE accepts only S256 — Authorizing OAuth apps (docs.github.com)",
+      "Token exchange requires client_id, client_secret and code; redirect_uri strongly recommended; code_verifier required if code_challenge was sent — Authorizing OAuth apps",
+      "Redirect matching is exact when wildcard matching is disabled; with it enabled host (excluding subdomains) and port must match and path must be a subdirectory; single-callback apps created before Aug 3, 2026 default to wildcard on — Authorizing OAuth apps",
+      "Loopback redirect_uri need not match the callback port — Authorizing OAuth apps",
+      "Expiring tokens: 8-hour access tokens, refresh tokens expire after 6 months of non-use; offline_access scope opts in — Authorizing OAuth apps",
+      "Up to 10 tokens per user/application/scope and 10 token creations per hour — Authorizing OAuth apps (building and using pages)",
+      "Registration path Settings > Developer settings > OAuth apps > New OAuth App and form fields; up to 100 OAuth apps per owner and up to 10 callback URLs; 'Expire user access tokens' enabled by default — Creating an OAuth app",
+      "GitHub Apps generally preferred; OAuth apps use scopes, not granular permissions — Differences between GitHub Apps and OAuth apps / Scopes for OAuth apps",
+      "Requested scopes are displayed on the authorization form; X-OAuth-Scopes and X-Accepted-OAuth-Scopes headers; 'repo' grants full access to public and private repositories — Scopes for OAuth apps",
+      "Source code access can't be scoped to read-only; users must verify their email before authorizing — Authorizing OAuth apps (using-oauth-apps)",
+      "OAuth app access restrictions are enabled by default for new organizations; unapproved apps lose access to private org resources; members request owner approval — About OAuth app access restrictions",
+      "OAuth user tokens get 5,000 requests/hour per user (15,000 for GHEC-owned/approved apps) — Rate limits for the REST API",
+      "Publisher verification is only required for paid plans or a Marketplace badge; requires org ownership, accurate profile/support email, org 2FA and a verified domain — Applying for publisher verification",
+      "Only org-owned apps can sell; both OAuth and GitHub Apps can be listed — About GitHub Marketplace for apps"
+    ],
+    "inferred": [
+      "No GitHub-side review gate exists before external users can authorize an OAuth app (none of the docs describe one; the creating-an-oauth-app page mentions no review)",
+      "Active time estimates are general estimates"
+    ],
+    "unverifiable": [
+      "Typical wait time for publisher verification review (docs say only that GitHub will review and notify you)",
+      "Any limit on the total number of users who can authorize an OAuth app (none documented)"
+    ],
+    "review": [
+      "Corrected: draft's docsUrl and sources pointed to raw github/docs repo files; replaced with https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps and the using-oauth-apps page.",
+      "Corrected: draft said redirect_uri host/port must match and path may be a subdirectory, unconditionally; https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps says that only applies with wildcard matching enabled, otherwise an exact match is required (single-callback apps created before Aug 3, 2026 default to wildcard on).",
+      "Corrected: draft omitted PKCE; the same authorizing page lists code_challenge/code_challenge_method as strongly recommended, S256 only.",
+      "Corrected: draft listed token expiration/refresh as unverifiable; the authorizing page says expiring access tokens last 8 hours with 6-month refresh tokens, and https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app shows 'Expire user access tokens' enabled by default.",
+      "Corrected: draft listed rate limits as unverifiable; https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api gives 5,000 req/hour per user (15,000 for GHEC). Added the 10-tokens-per-user/app/scope cap from the authorizing page.",
+      "Confirmed: registration path and form fields (moved from inferred to verified), 100-app and 10-callback-URL limits, at https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app; no review step is mentioned.",
+      "Confirmed: OAuth app access restrictions are enabled by default for new organizations (moved from inferred to verified) at https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions.",
+      "Confirmed: publisher verification is only for paid plans/Marketplace badge, with org 2FA, verified domain and profile requirements, at https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization.",
+      "Could not verify: publisher verification review wait time; the docs give no timeframe.",
+      "Corrected: removed the draft gotcha about disregarded third-party pages and dropped irrelevant sources (atulmy/oauth, jupyterhub issue, NestJS sandbox, Elastic Path YAML)."
+    ]
+  },
+  "sources": [
+    {
+      "title": "Authorizing OAuth apps - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps"
+    },
+    {
+      "title": "Creating an OAuth app - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app"
+    },
+    {
+      "title": "Scopes for OAuth apps - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps"
+    },
+    {
+      "title": "Differences between GitHub Apps and OAuth apps - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/differences-between-github-apps-and-oauth-apps"
+    },
+    {
+      "title": "Authorizing OAuth apps (using OAuth apps) - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/oauth-apps/using-oauth-apps/authorizing-oauth-apps"
+    },
+    {
+      "title": "About OAuth app access restrictions - GitHub Docs",
+      "url": "https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions"
+    },
+    {
+      "title": "Rate limits for the REST API - GitHub Docs",
+      "url": "https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api"
+    },
+    {
+      "title": "Applying for publisher verification for your organization - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/applying-for-publisher-verification-for-your-organization"
+    },
+    {
+      "title": "About GitHub Marketplace for apps - GitHub Docs",
+      "url": "https://docs.github.com/en/apps/github-marketplace/github-marketplace-overview/about-github-marketplace-for-apps"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

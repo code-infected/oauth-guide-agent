@@ -1,0 +1,190 @@
+{
+  "slug": "linkedin",
+  "app": {
+    "name": "LinkedIn",
+    "website": "https://linkedin.com",
+    "docsUrl": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/getting-access"
+  },
+  "difficulty": "moderate",
+  "effort": {
+    "activeTime": "~30-60 minutes for self-serve products (Sign In with LinkedIn using OpenID Connect, Share on LinkedIn); several hours more for gated products that need an access request form, screencast and partner application",
+    "waitTime": "none for self-serve Open Permissions; up to 30 days for a Page super admin to verify the app if your products need it; unknown for gated products and partner programs"
+  },
+  "steps": [
+    {
+      "title": "Decide which LinkedIn product(s) your agent needs",
+      "detail": "Only the Open Permissions are self-serve: Sign In with LinkedIn using OpenID Connect (openid, profile, email) and Share on LinkedIn (w_member_social, to post, comment and like on the member's behalf). LinkedIn says most other permissions and partner programs need explicit approval. Advertising API (Marketing) access is approved via the Products tab. Sales permissions require Sales Navigator Application Platform (SNAP) partnership. Talent integrations need a partner application. Compliance access is closed.",
+      "automatable": true
+    },
+    {
+      "title": "Prepare a LinkedIn Page, website and privacy policy",
+      "detail": "The app-creation form asks for a LinkedIn Page and a privacy policy URL. Gated-product review also checks your organization's website, privacy policy and that the associated Page belongs to your organization. Make sure all three are live and match your legal entity.",
+      "automatable": false
+    },
+    {
+      "title": "Create the app in the Developer Portal",
+      "detail": "At https://www.linkedin.com/developers/apps click 'Create app'. Enter an app name (it must not include portions of the LinkedIn or Microsoft names or logos), enter your LinkedIn Page name or URL (or create a Page), add the privacy policy URL, upload a logo (shown to users on the consent screen), check 'I have read and agree to these terms' and click 'Create app'.",
+      "automatable": false
+    },
+    {
+      "title": "Verify the app with your Page super admin if needed",
+      "detail": "For certain functionality and products the app must be associated with a verified LinkedIn Page. In the app's Settings tab, click Verify, generate the unique URL, and send it to the Page super admin by email or LinkedIn Messaging. The super admin has 30 days to approve it, and approval can't be undone.",
+      "automatable": false
+    },
+    {
+      "title": "Add products",
+      "detail": "In the Products tab, add the self-serve products, such as Sign In with LinkedIn using OpenID Connect and Share on LinkedIn. For gated products, submit the access request form or partner application. The Auth tab then shows the scopes your app is entitled to.",
+      "automatable": true
+    },
+    {
+      "title": "Configure Auth settings",
+      "detail": "In the app's Auth tab, copy the Client ID and Client Secret and add your redirect URL(s). Redirect URLs must be absolute HTTPS URLs and cannot contain '#'. Query parameters are ignored when matching. The redirect_uri in requests must match one of the registered URLs.",
+      "automatable": true
+    },
+    {
+      "title": "Complete the access request and screencast for gated products",
+      "detail": "For products and tiers that require review, fill in the access request form with a specific use case and provide a screencast of your app. Track status under 'Review in progress' in the Developer Portal. Which stages appear (Access Form Review, Identity Vetting, App Review) depends on the product and tier.",
+      "automatable": false
+    },
+    {
+      "title": "Implement the authorization code flow",
+      "detail": "Redirect users to https://www.linkedin.com/oauth/v2/authorization with response_type=code, client_id, redirect_uri, scope (space-delimited, required) and state. The authorization code lasts 30 minutes. Exchange it at https://www.linkedin.com/oauth/v2/accessToken as a form-encoded POST with client_id, client_secret and redirect_uri. Call APIs with an 'Authorization: Bearer' header.",
+      "automatable": true
+    },
+    {
+      "title": "Test with an external account",
+      "detail": "Confirm that a LinkedIn member outside your company can authorize the app and that the granted scopes match what you requested.",
+      "automatable": true
+    }
+  ],
+  "gotchas": [
+    "Self-serve access is limited to sign-in (lite profile and email) and posting as the member. Reading a member's feed, connections, messages or organization data needs gated products or partner programs, which matters for most agent use cases.",
+    "App names containing portions of the LinkedIn or Microsoft names or logos are rejected ('Invalid App Name').",
+    "The LinkedIn Page you associate must belong to your organization, or review fails with 'Invalid Company Page'. Page verification links expire after 30 days.",
+    "Access tokens last 60 days. Programmatic refresh tokens are available only for a limited set of partners, so most apps must send users back through the authorization flow. If the member is still logged in and the token hasn't expired, the consent screen is skipped.",
+    "Users must accept all requested scopes together. If you change requested scopes, users must re-authenticate and previously issued access tokens are invalidated.",
+    "Redirect URLs must be absolute HTTPS URLs with no '#'. Query parameters on registered URLs are ignored.",
+    "Share on LinkedIn rate limits: 150 requests per member per day and 100,000 per application per day (UTC).",
+    "Legacy scopes like r_liteprofile and r_emailaddress have been superseded by the OpenID Connect scopes openid, profile and email (inferred).",
+    "The email claim from OpenID Connect is optional and may be missing from responses."
+  ],
+  "approval": {
+    "required": false,
+    "process": "Not required for the self-serve Open Permissions (Sign In with LinkedIn using OpenID Connect and Share on LinkedIn), which are added from the Products tab. External members can authorize those as soon as the products are added. Gated products and tiers go through Access Form Review, Identity Vetting (organization meets access requirements) and App Review (app and screencast). Sales and Talent APIs require partner program approval, and Compliance is closed.",
+    "typicalWait": "none for self-serve products; unknown for gated products",
+    "rejectionRisks": [
+      "Incomplete access request form",
+      "Use case not approved for the API",
+      "Failed email verification",
+      "Organization not verifiable as a legally registered, active entity",
+      "Unverifiable company website",
+      "Company Page belongs to a different organization",
+      "Organization does not meet access requirements",
+      "Unverifiable privacy policy",
+      "Screencast does not meet requirements",
+      "App name includes LinkedIn or Microsoft names or logos",
+      "Not in compliance with LinkedIn API terms and data restrictions"
+    ]
+  },
+  "blockers": [
+    {
+      "issue": "No LinkedIn Page, or you are not its super admin",
+      "whatToDo": "Create a Page for your company from the app-creation form, or ask the existing Page super admin to approve the verification URL within 30 days."
+    },
+    {
+      "issue": "Needed API is not self-serve and the use case may be rejected as 'Unapproved Use Case'",
+      "whatToDo": "Check whether your agent can work with the Open Permissions (profile, email, w_member_social). If not, write a precise use case that fits LinkedIn's approved uses and apply through the Products tab access request or the relevant partner program (Marketing, SNAP, Talent)."
+    },
+    {
+      "issue": "Organization verification fails",
+      "whatToDo": "Make sure your legal entity, website, domain email and privacy policy are consistent and publicly verifiable before submitting."
+    },
+    {
+      "issue": "Agent loses access after 60 days",
+      "whatToDo": "Programmatic refresh tokens are partner-only. Prompt users to re-authorize before the token expires, which is seamless while they're logged in to LinkedIn."
+    }
+  ],
+  "agentCanDo": [
+    "Read the LinkedIn docs on Microsoft Learn (Getting Access, 3-legged OAuth, OpenID Connect, Share on LinkedIn) and the Help pages on app review and Page verification",
+    "Map your agent's features to LinkedIn products and the minimal scopes needed",
+    "Draft the access request use case text and a privacy policy",
+    "Script the screencast for app review",
+    "Write the OAuth authorization code flow and token re-authorization handling",
+    "Fill in Developer Portal forms while you are logged in"
+  ],
+  "youMustDo": [
+    "Sign in with your LinkedIn account and create the app",
+    "Own or get super-admin approval from the LinkedIn Page for app verification, if your products require it",
+    "Accept the LinkedIn API Terms of Use",
+    "Provide accurate organization details, website, email and privacy policy for identity vetting (gated products)",
+    "Record and submit the screencast if required",
+    "Wait for and respond to LinkedIn's review decision for gated products"
+  ],
+  "evidence": {
+    "verified": [
+      "Open Permissions available to all developers via self-service in the Products tab: profile and email (Sign In with LinkedIn using OpenID Connect) and w_member_social (Share on LinkedIn); most other permissions and programs require explicit approval; Sales requires SNAP partnership; Talent requires partner application; Compliance is closed (learn.microsoft.com Getting Access)",
+      "OpenID Connect uses openid, profile and email scopes; email claim is optional (learn.microsoft.com Sign In with LinkedIn using OpenID Connect)",
+      "Authorization endpoint www.linkedin.com/oauth/v2/authorization and token endpoint /oauth/v2/accessToken; redirect URLs must be absolute HTTPS, parameters ignored, no '#'; redirect_uri must match a registered URL; authorization code lasts 30 minutes; access tokens have a 60-day lifespan; programmatic refresh tokens only for a limited set of partners; changing scopes requires re-authentication and invalidates previous tokens; users must consent to all scopes (learn.microsoft.com 3-legged OAuth flow)",
+      "Share on LinkedIn rate limits: 150 requests/member/day and 100,000/application/day (learn.microsoft.com Share on LinkedIn)",
+      "App creation asks for a LinkedIn Page, privacy policy URL, logo and terms acceptance; for certain functionality and products the app must be associated with a Page (LinkedIn Help a1667239)",
+      "Page verification: Settings tab > Verify, unique URL sent to the Page super admin who has 30 days to verify (LinkedIn Help a1665329)",
+      "Review status messages are Access Form Review, Identity Vetting and App Review, depending on product and tier; rejection reasons include Invalid App Name, Invalid Company Page, Unapproved Use Case, Invalid Screencast and others (LinkedIn Help a1449586)"
+    ],
+    "inferred": [
+      "Legacy scopes r_liteprofile and r_emailaddress are superseded by OpenID Connect scopes",
+      "Community Management API and other member-data APIs useful to agents are gated behind app review"
+    ],
+    "unverifiable": [
+      "Typical review wait times for gated products",
+      "Exactly which products require Page verification",
+      "General API rate limits beyond Share on LinkedIn"
+    ],
+    "review": [
+      "Confirmed: Sign In with LinkedIn using OpenID Connect (openid, profile, email) and Share on LinkedIn (w_member_social) are Open Permissions added self-service from the Products tab, per https://learn.microsoft.com/en-us/linkedin/shared/authentication/getting-access; moved from inferred to verified.",
+      "Corrected: approval.required changed from true to false, since self-serve products need no review before external members can authorize. Gated products (Advertising API, SNAP, Talent) still require approval, and Compliance is closed, per the Getting Access page.",
+      "Confirmed: 60-day access token lifespan and that programmatic refresh tokens are limited to a set of partners, per https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow; moved from inferred to verified.",
+      "Corrected: draft only said redirect URLs must match exactly; the 3-legged OAuth doc says they must be absolute HTTPS URLs, query parameters are ignored and '#' is not allowed. Added the 30-minute authorization code lifetime and scope-change token invalidation.",
+      "Corrected: draft inferred that a Page admin must confirm the association; https://www.linkedin.com/help/linkedin/answer/a1665329 says the Page super admin verifies via a unique URL from the app's Settings tab within 30 days, required only for certain functionality and products.",
+      "Confirmed: app creation form fields (LinkedIn Page, privacy policy URL, logo, terms checkbox), per https://www.linkedin.com/help/linkedin/answer/a1667239.",
+      "Confirmed: review stages and rejection reasons, per https://www.linkedin.com/help/linkedin/answer/a1449586 (from the draft; not re-fetched).",
+      "Corrected: added Share on LinkedIn rate limits (150/member/day, 100,000/app/day) from https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin, and removed unrelated LinkedIn posts (rate limiting essay, Epic App Orchard, generic OAuth explainers) from sources.",
+      "Could not verify: review wait times for gated products, and the explicit deprecation of r_liteprofile/r_emailaddress; the docs checked don't state either."
+    ]
+  },
+  "sources": [
+    {
+      "title": "Getting Access to LinkedIn APIs - LinkedIn | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/getting-access"
+    },
+    {
+      "title": "LinkedIn 3-Legged OAuth Flow - LinkedIn | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/linkedin/shared/authentication/authorization-code-flow"
+    },
+    {
+      "title": "Sign In with LinkedIn using OpenID Connect - LinkedIn | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/sign-in-with-linkedin-v2"
+    },
+    {
+      "title": "Share on LinkedIn - LinkedIn | Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin"
+    },
+    {
+      "title": "Create a new app for a LinkedIn Page | LinkedIn Help",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a1667239"
+    },
+    {
+      "title": "Send an app verification request for a LinkedIn Page | LinkedIn Help",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a1665329"
+    },
+    {
+      "title": "Developer application review status definitions | LinkedIn Help",
+      "url": "https://www.linkedin.com/help/linkedin/answer/a1449586"
+    },
+    {
+      "title": "LinkedIn Developer Solutions",
+      "url": "https://developer.linkedin.com"
+    }
+  ],
+  "isLive": false,
+  "generatedAt": "2026-10-20T00:00:00.000Z"
+}

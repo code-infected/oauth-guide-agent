@@ -1,0 +1,12 @@
+[
+  { "name": "Todoist", "website": "https://todoist.com" },
+  { "name": "Discord", "website": "https://discord.com" },
+  { "name": "GitHub", "website": "https://github.com" },
+  { "name": "Slack", "website": "https://slack.com" },
+  { "name": "Notion", "website": "https://notion.com" },
+  { "name": "Spotify", "website": "https://spotify.com" },
+  { "name": "Atlassian", "website": "https://atlassian.com" },
+  { "name": "Dropbox", "website": "https://dropbox.com" },
+  { "name": "Gmail", "website": "https://mail.google.com" },
+  { "name": "LinkedIn", "website": "https://linkedin.com" }
+]
