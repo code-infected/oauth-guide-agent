@@ -9,6 +9,7 @@
 ## Contents
 
 - [The problem](#the-problem)
+- [Where this fits: managed auth vs. your own OAuth app](#where-this-fits-managed-auth-vs-your-own-oauth-app)
 - [What it does](#what-it-does)
 - [Try it](#try-it)
 - [Quick start](#quick-start)
@@ -26,6 +27,19 @@
 Before a developer's users can connect a third-party app to their agent, the developer usually has to register an **OAuth app** with that provider. That gives them the client ID and secret, redirect URIs and scopes that every user connection runs through. Many providers also put that app through review before **external** users (people outside the developer's own account or organization) can authorize it.
 
 Developers today piece this together from scattered docs, unfamiliar consoles and emails to the provider. The hard part is not knowing up front whether setup will take fifteen minutes or six weeks, or what will get the app rejected.
+
+## Where this fits: managed auth vs. your own OAuth app
+
+Platforms like Composio offer **managed auth**: the platform registers the OAuth app, and developers connect users without doing any of this. According to Composio's [managed auth directory](https://docs.composio.dev/toolkits/managed-auth) (checked 2026-10-20), 123 OAuth toolkits have a Composio-managed app and 211 don't.
+
+Managed auth is the right starting point for prototyping. Composio's own guidance on [managed vs. custom auth](https://docs.composio.dev/docs/custom-app-vs-managed-app) recommends **your own OAuth app for production**:
+- users see your name on the consent screen, not the platform's
+- you can request custom scopes
+- you get a dedicated rate-limit quota
+
+For the 211 toolkits without a managed app, bringing your own is the only option.
+
+So every developer whose product reaches real users ends up on the path these guides cover: registering their own app and getting it approved. Managed auth decides *when* a developer needs the guide, not *whether*. In the seed library, Spotify has no managed app, so a developer needs their own app from day one. The other nine have managed apps, so the guide is what a developer follows when moving from prototype to production.
 
 ## What it does
 
