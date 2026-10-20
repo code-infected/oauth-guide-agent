@@ -223,6 +223,15 @@ Every seed guide was produced by the same pipeline that serves live requests. It
 | Gmail | hard → hard | `gmail.metadata` is **restricted** (the draft offered it as the easier option). CASA is required for restricted scopes. Filled in the documented waits: brand verification 2–3 days, sensitive scopes 3–5 days, restricted scopes "several weeks". |
 | LinkedIn | moderate → moderate | `approval.required` was wrong: Sign In with LinkedIn (OIDC) and Share on LinkedIn are self-serve. The Marketing, Sales and Talent APIs are gated. |
 
+### Real setup attempts
+
+Beyond reading docs, OAuth apps were actually registered on two providers through a browser on 2026-10-20. Each used a `http://localhost:3000/callback` test redirect. Authorization was opened but never completed, and no client secrets were generated.
+
+| Provider | What happened | Learned |
+|---|---|---|
+| GitHub | App created instantly with no review; Client ID issued immediately; consent screen worked at once | Matches the guide: exact redirect matching for new apps, expiring tokens on by default. **New:** the consent screen flags new apps as "Not owned or operated by GitHub", "Created less than a day ago" and "Fewer than 10 GitHub users", so the guide now warns about that. The form says "Redirect URI", not the docs' "Authorization callback URL". |
+| Discord | App created after ticking agreement to the Developer Terms; consent screen worked at once for the unverified app | Matches the corrected guide: App Verification only applies past 100 servers, and `messages.read` was offered at consent with no approval. **New:** redirect changes need an explicit "Save Changes". |
+
 ### What couldn't be verified
 
 Each seed guide also lists open questions under **Evidence → Couldn't be determined**. The main ones:
@@ -265,7 +274,7 @@ To check the checkers, the highest-impact claims were re-verified independently 
 
 ## Limitations
 
-- **Verification method.** The seed guides were checked by AI agents (Claude Code) that read each provider's live official documentation. No setup was attempted in a real provider console, and no app was submitted for approval, since both require provider accounts.
+- **Verification method.** The seed guides were checked by AI agents (Claude Code) that read each provider's live official documentation. Real setup was attempted only for GitHub and Discord. No app was submitted for review, so approval timelines (Slack, Gmail, Spotify and others) come from the providers' docs, not experience.
 - **Live guides are unreviewed.** Their quality depends on what search surfaces from the provider's domain. Requirements documented on another domain, or only on pages the searches don't reach, can be missed.
 - **Docs resolution is heuristic.** Ambiguous names (e.g. "Box", "Linear") can resolve to the wrong provider. Entering the website URL avoids this.
 - **Storage is ephemeral.** SQLite lives on the free instance's disk, which doesn't persist. Live-generated guides, and their links, are lost whenever the service restarts or redeploys. Seed guides are committed JSON and reload on every start. A persistent disk or hosted database would fix this.

@@ -73,7 +73,8 @@
     "Users must have a verified email address before authorizing an OAuth app.",
     "GitHub issues at most 10 tokens per user/application/scope combination and allows 10 token creations per hour; exceeding the 10-token cap silently revokes an older token, so don't re-run the flow per session.",
     "REST API rate limit for OAuth user tokens is 5,000 requests/hour per user, shared with that user's other apps and PATs (15,000/hour when the app is owned or approved by a GitHub Enterprise Cloud org the user belongs to).",
-    "Implicit grant and CORS preflight requests are not supported, so the token exchange must happen server-side."
+    "Implicit grant and CORS preflight requests are not supported, so the token exchange must happen server-side.",
+    "New apps look untrusted on the consent screen: GitHub shows \"Not owned or operated by GitHub\", \"Created less than a day ago\" and \"Fewer than 10 GitHub users\" (observed in a real setup test). Expect some users to hesitate until the app has a history."
   ],
   "approval": {
     "required": false,
@@ -144,7 +145,8 @@
       "OAuth app access restrictions are enabled by default for new organizations; unapproved apps lose access to private org resources; members request owner approval — About OAuth app access restrictions",
       "OAuth user tokens get 5,000 requests/hour per user (15,000 for GHEC-owned/approved apps) — Rate limits for the REST API",
       "Publisher verification is only required for paid plans or a Marketplace badge; requires org ownership, accurate profile/support email, org 2FA and a verified domain — Applying for publisher verification",
-      "Only org-owned apps can sell; both OAuth and GitHub Apps can be listed — About GitHub Marketplace for apps"
+      "Only org-owned apps can sell; both OAuth and GitHub Apps can be listed — About GitHub Marketplace for apps",
+      "Observed in a real setup test: instant creation with no review, exact redirect matching for new apps, \"Expire user access tokens\" on by default, and new-app trust signals on the consent screen."
     ],
     "inferred": [
       "No GitHub-side review gate exists before external users can authorize an OAuth app (none of the docs describe one; the creating-an-oauth-app page mentions no review)",
@@ -155,6 +157,10 @@
       "Any limit on the total number of users who can authorize an OAuth app (none documented)"
     ],
     "review": [
+      "Tested (2026-10-20): registered a real OAuth app in the GitHub console. It was created instantly with no review; the Client ID was issued immediately and the consent screen worked for the app straight away.",
+      "Tested: the registration form labels the field \"Redirect URI\" (not \"Authorization callback URL\" as in the docs), allows up to 10, shows \"Allow wildcard matching\" unchecked, and has \"Expire user access tokens\" checked by default, all matching this guide.",
+      "Tested: a redirect_uri with a different path was rejected (\"The redirect_url is not associated with this application\"), confirming exact matching for new apps.",
+      "Tested: the consent screen shows trust signals for new apps: \"Not owned or operated by GitHub\", \"Created less than a day ago\" and \"Fewer than 10 GitHub users\".",
       "Corrected: draft's docsUrl and sources pointed to raw github/docs repo files; replaced with https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps and the using-oauth-apps page.",
       "Corrected: draft said redirect_uri host/port must match and path may be a subdirectory, unconditionally; https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps says that only applies with wildcard matching enabled, otherwise an exact match is required (single-callback apps created before Aug 3, 2026 default to wildcard on).",
       "Corrected: draft omitted PKCE; the same authorizing page lists code_challenge/code_challenge_method as strongly recommended, S256 only.",

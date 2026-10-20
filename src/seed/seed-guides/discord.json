@@ -62,7 +62,8 @@
     "Requests without a valid User-Agent may be blocked by Cloudflare. A missing or invalid Content-Type returns error 50035 (Invalid Form Body).",
     "API users who regularly hit and ignore rate limits have their API keys revoked and are blocked from the platform.",
     "Partner-only scopes (rpc, rpc.*, dm_channels.read, identify.premium, voice, applications.builds.upload) and relationships.read (Social SDK) need Discord approval. Requesting them without approval may cause errors or undocumented behaviour.",
-    "Bot tokens and client secrets are different credentials. Never commit either to version control."
+    "Bot tokens and client secrets are different credentials. Never commit either to version control.",
+    "Redirect changes in the Developer Portal are not saved until you click \"Save Changes\" in the bar that appears at the bottom; leaving the page discards them (observed in a real setup test)."
   ],
   "approval": {
     "required": false,
@@ -114,7 +115,8 @@
       "OAuth2 page: describes no general app review; approval applies only to the noted scopes.",
       "OAuth2 and Permissions page: scopes must be declared in the Developer Portal, and user access tokens are short-lived and must be refreshed.",
       "API Reference: User-Agent format is DiscordBot ($url, $versionNumber), and an invalid one may be blocked by Cloudflare. A missing Content-Type gives 50035. Users who regularly ignore rate limits have their API keys revoked and are blocked.",
-      "Gateway page: verification is required for apps in 100+ guilds. Above 10,000 unique users, apps must submit a review request for privileged intents; below that they toggle them in the portal."
+      "Gateway page: verification is required for apps in 100+ guilds. Above 10,000 unique users, apps must submit a review request for privileged intents; below that they toggle them in the portal.",
+      "Observed in a real setup test: app creation needs only ticking the Developer Terms checkbox, the OAuth consent screen works immediately with no review, and App Verification only concerns scaling past 100 servers."
     ],
     "inferred": [
       "A pure user-OAuth2 app (no bot) never reaches the verification gate, because verification is tied to guild count and privileged intents are bot/gateway features.",
@@ -127,6 +129,10 @@
       "Numeric per-route rate limits for OAuth2 endpoints."
     ],
     "review": [
+      "Tested (2026-10-20): created a real app in the Discord Developer Portal. Creating it requires ticking agreement to the Developer Terms of Service and Developer Policy; the app and Client ID were available immediately.",
+      "Tested: added a redirect in OAuth2 > Redirects (an explicit \"Save Changes\" is required) and opened the authorize URL. The consent screen worked straight away for the unverified app, with no review.",
+      "Tested: the App Verification page says verification is required \"to scale your application past 100 servers\", so it does not gate user OAuth login, matching this guide.",
+      "Tested: the consent screen offered messages.read (\"Read all messages\") without any approval step, consistent with it not being a restricted scope. Whether the API returns data for it was not tested.",
       "Corrected: lowered difficulty from moderate to trivial. https://docs.discord.com/developers/topics/oauth2 describes no general app review, and standard user scopes have no approval requirement, so external users can authorize immediately.",
       "Confirmed: authorize/token/revoke endpoints, form-urlencoded only, redirect_uri matching, state, iss and prompt behaviour — https://docs.discord.com/developers/topics/oauth2",
       "Corrected: the restricted-scope list. messages.read is not in the partner-only list. The partner-only scopes are rpc*, dm_channels.read, identify.premium, voice and applications.builds.upload; relationships.read requires the Social SDK — https://docs.discord.com/developers/topics/oauth2",
