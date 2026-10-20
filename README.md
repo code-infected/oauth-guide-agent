@@ -2,7 +2,7 @@
 
 > Look up any app and get a shareable, evidence-backed guide to registering its OAuth app and getting it approved, so your users can connect it to your AI agent.
 
-**Live demo:** https://oauth-guide-agent.onrender.com
+**Live demo:** https://oauth-guide-agent.onrender.com · **Repository:** https://github.com/code-infected/oauth-guide-agent
 
 ---
 
@@ -222,6 +222,23 @@ Every seed guide was produced by the same pipeline that serves live requests. It
 | Dropbox | moderate → moderate | Production review only starts after 50 linked users (the draft said to apply "well before 50"). Removed Dropbox Sign, a different product. |
 | Gmail | hard → hard | `gmail.metadata` is **restricted** (the draft offered it as the easier option). CASA is required for restricted scopes. Filled in the documented waits: brand verification 2–3 days, sensitive scopes 3–5 days, restricted scopes "several weeks". |
 | LinkedIn | moderate → moderate | `approval.required` was wrong: Sign In with LinkedIn (OIDC) and Share on LinkedIn are self-serve. The Marketing, Sales and Talent APIs are gated. |
+
+### What couldn't be verified
+
+Each seed guide also lists open questions under **Evidence → Couldn't be determined**. The main ones:
+
+| App | Not verified |
+|---|---|
+| Todoist | Numeric rate limits; what the per-app token limit behind `invalid_application_status` is; whether the console requires a privacy policy |
+| Discord | Stripe ID check, age rule and Privileged Intent reapplication rules (support pages returned 403); verification wait times; OAuth rate limits |
+| GitHub | How long Marketplace publisher verification takes; whether there's a cap on authorizing users |
+| Slack | The itemized Manage Distribution checklist; how workspace admins approve apps; token lifetime with rotation enabled |
+| Notion | Token lifetimes; per-workspace rate-limit values; a docs caption hinting at a review step no other page describes |
+| Spotify | The games/broadcasting restriction (Developer Policy not checked); real-world review times beyond "up to six weeks" |
+| Atlassian | Fields on the distribution form; whether more than one callback URL is allowed; approval time for OAuth integrations |
+| Dropbox | How long production review takes; API rate limits |
+| Gmail | Cost and duration of the CASA security assessment |
+| LinkedIn | Review times for partner-gated products; formal deprecation of the legacy `r_liteprofile` / `r_emailaddress` scopes |
 
 ### Second-pass spot-check
 
