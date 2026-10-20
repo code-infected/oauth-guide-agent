@@ -225,7 +225,7 @@ Every seed guide was produced by the same pipeline that serves live requests. It
 
 ### Real setup attempts
 
-Beyond reading docs, OAuth apps were actually registered on two providers through a browser on 2026-10-20. Each used a `http://localhost:3000/callback` test redirect. Authorization was opened but never completed, and no client secrets were generated.
+Beyond reading docs, OAuth apps were actually registered on two providers on 2026-10-20. The setup attempts were run by an AI agent (Claude Code) driving a browser under the developer's own accounts. The developer handled the steps an agent shouldn't (signing in and accepting Discord's Developer Terms), mirroring the agent / developer split each guide describes. Each used a `http://localhost:3000/callback` test redirect. Authorization was opened but never completed, and no client secrets were generated.
 
 | Provider | What happened | Learned |
 |---|---|---|
