@@ -236,8 +236,8 @@ Every seed guide was produced by the same pipeline that serves live requests. It
 - **Verification method.** The seed guides were checked by AI agents (Claude Code) that read each provider's live official documentation. No setup was attempted in a real provider console, and no app was submitted for approval, since both require provider accounts.
 - **Live guides are unreviewed.** Their quality depends on what search surfaces from the provider's domain. Requirements documented on another domain, or only on pages the searches don't reach, can be missed.
 - **Docs resolution is heuristic.** Ambiguous names (e.g. "Box", "Linear") can resolve to the wrong provider. Entering the website URL avoids this.
-- **Storage is ephemeral.** SQLite lives on the instance's disk, so live-generated guides, and their links, are lost on redeploy. Seed guides are committed JSON and reload on every start.
-- **Cold starts.** On Render's free tier the service sleeps when idle, and the first request afterwards takes 30–50 seconds.
+- **Storage is ephemeral.** SQLite lives on the free instance's disk, which doesn't persist. Live-generated guides, and their links, are lost whenever the service restarts or redeploys. Seed guides are committed JSON and reload on every start. A persistent disk or hosted database would fix this.
+- **Kept awake by an external monitor.** Render's free tier sleeps after 15 minutes without traffic, and waking takes 30–60 seconds. The deployment avoids this with an uptime monitor that requests `/api/guides` every 5 minutes. Without it, the first visit after an idle period is slow, and sleeping restarts the instance, which clears live guides.
 - **No rate limiting or authentication.** Each live guide costs about 5 Tavily searches and one LLM call. This is acceptable for a demo but not for a public deployment.
 
 ## Deployment
