@@ -223,6 +223,21 @@ Every seed guide was produced by the same pipeline that serves live requests. It
 | Gmail | hard → hard | `gmail.metadata` is **restricted** (the draft offered it as the easier option). CASA is required for restricted scopes. Filled in the documented waits: brand verification 2–3 days, sensitive scopes 3–5 days, restricted scopes "several weeks". |
 | LinkedIn | moderate → moderate | `approval.required` was wrong: Sign In with LinkedIn (OIDC) and Share on LinkedIn are self-serve. The Marketing, Sales and Talent APIs are gated. |
 
+### Second-pass spot-check
+
+To check the checkers, the highest-impact claims were re-verified independently against the official pages:
+
+| Claim | Result |
+|---|---|
+| Gmail: `gmail.metadata` is restricted; `gmail.send` sensitive; `gmail.labels` non-sensitive | Confirmed |
+| Spotify: 5-user Development Mode cap; Extended Quota for organizations only, ≥250k MAU, review up to six weeks | Confirmed |
+| Dropbox: 500-user development cap; review starts at 50 linked users; two-week window | Confirmed |
+| GitHub OAuth apps: 8-hour expiring tokens on by default, 6-month refresh tokens, 10 callback URLs, wildcard rule for pre-Aug 3, 2026 apps | Confirmed |
+| LinkedIn: Sign In with LinkedIn (OIDC) and Share on LinkedIn are self-serve | Confirmed |
+| Slack: 10 active workspaces to submit; up to 10 business days + up to 10 weeks review; no expediting | Confirmed |
+| Atlassian: points-based limits for 3LO apps from March 2, 2026; 65,000-point hourly quota shared across tenants | Confirmed |
+| Spotify: February 2026 endpoint removals applied to existing apps from March 9 | **Corrected.** Spotify postponed endpoint changes for existing integrations; only new Development Mode apps are affected |
+
 ### What the evaluation showed
 
 - **Difficulty bands are reliable.** One of 10 changed. Discord moved down because the draft applied bot-only requirements to every OAuth app.
